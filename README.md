@@ -1,5 +1,7 @@
 # Karagöz
+
 **Play online:** https://furkiozknn.github.io/karagoz/ (desktop and phone, no install)
+![Karagöz gameplay: moving puppets and lamps behind the shadow screen](docs/gameplay.gif)
 
 A 3D shadow-theatre light puzzle about Karagöz and Hacivat, the two heroes of traditional Turkish shadow theatre. A small
 wooden booth stands in a dim Ottoman coffee house at night. Behind its white cloth screen (the *perde*) you place, slide
