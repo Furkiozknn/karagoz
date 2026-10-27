@@ -37,8 +37,8 @@
   "media": {
     "hero": "docs/02-backstage.png",
     "screenshots": [
-      "docs/01-title.png",
       "docs/02-backstage.png",
+      "docs/01-title.png",
       "docs/03-audience.png",
       "docs/04-colour-lamps.png",
       "docs/05-act-map.png",
