@@ -146,6 +146,10 @@ other games: [Hisar](https://furkiozknn.github.io/kale-savunmasi/) ·
 [Mehter](https://furkiozknn.github.io/mehter/) · [Boğaz Vapuru](https://furkiozknn.github.io/bogaz-vapuru/) ·
 [Simit Fırını](https://furkiozknn.github.io/simit-firini/) · [Lale Bahçesi](https://furkiozknn.github.io/lale-bahcesi/)
 
+**Round 5:** [Kapadokya Balonu](https://furkiozknn.github.io/kapadokya-balonu/) ·
+[Ebru](https://furkiozknn.github.io/ebru/) · [Kırkpınar](https://furkiozknn.github.io/kirkpinar/) ·
+[Çarşı Kaçışı](https://furkiozknn.github.io/carsi-kacisi/)
+
 ## Türkçe
 
 **Karagöz**, gece bir Osmanlı kahvehanesinde geçen 3D gölge oyunu ışık bulmacası. Perdenin arkasında renkli deri
