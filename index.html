@@ -904,8 +904,8 @@ function renderShadows(TG, V, display, fade = 1, cacheKey = null) {
       cc.setTransform(1, 0, 0, 1, 0, 0); cc.globalAlpha = 1; cc.globalCompositeOperation = 'source-over'; if (FILTER_OK) cc.filter = 'none';
       cc.fillStyle = rgbStr(L.col, lv / 2 / V.NL); cc.fillRect(0, 0, W, H);
       if (display) {
-        const gx = W / 2 + k * L.x, gy = H / 2 - k * LY, g = cc.createRadialGradient(gx, gy, 0, gx, gy, k * 3.1);
-        g.addColorStop(0, '#fff'); g.addColorStop(1, '#8c8c8c');
+        const gx = W / 2 + k * L.x, gy = H / 2 - k * LY, g = cc.createRadialGradient(gx, gy, 0, gx, gy, k * 3.0);
+        g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#f6dfb4'); g.addColorStop(1, '#6e3c14');
         cc.globalCompositeOperation = 'multiply'; cc.fillStyle = g; cc.fillRect(0, 0, W, H);
       }
       cc.globalCompositeOperation = 'multiply';
@@ -958,13 +958,14 @@ const CLOTH = document.createElement('canvas');
 {
   CLOTH.width = DISP.W; CLOTH.height = DISP.H; const c = CLOTH.getContext('2d'), W = DISP.W, H = DISP.H;
   c.fillStyle = '#fbf0d6'; c.fillRect(0, 0, W, H);
-  c.globalAlpha = 0.05; c.fillStyle = '#5a3a20';
+  c.globalAlpha = 0.07; c.fillStyle = '#5a3a20';
   for (let y = 0; y < H; y += 2) c.fillRect(0, y, W, 1);
-  c.globalAlpha = 0.03; for (let x = 0; x < W; x += 3) c.fillRect(x, 0, 1, H);
+  c.globalAlpha = 0.05; for (let x = 0; x < W; x += 3) c.fillRect(x, 0, 1, H);
+  c.globalAlpha = 0.05; for (let y = 0; y < H; y += 9) c.fillRect(0, y + (y % 3), W, 1);
   c.globalAlpha = 0.06; for (let i = 0; i < 900; i++) c.fillRect(Math.random() * W, Math.random() * H, 1 + Math.random() * 3, 1);
   c.globalAlpha = 1;
   const g = c.createRadialGradient(W / 2, H * 0.55, H * 0.25, W / 2, H * 0.55, W * 0.62);
-  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(60,30,10,0.42)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(70,32,8,0.55)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
 }
 
 // ---------------------------------------------------------------------------
@@ -1092,6 +1093,63 @@ function facadeTex() {
     c.lineWidth = 4; c.strokeStyle = '#e8b84a'; c.stroke();
     c.save(); c.setLineDash([2, 7]); c.lineWidth = 6; c.strokeStyle = '#ffd27a'; arch(c); c.stroke(); c.restore();
     c.globalCompositeOperation = 'destination-out'; arch(c); c.fill(); c.globalCompositeOperation = 'source-over';
+  });
+}
+// back of the booth as seen from backstage: carved arch, maroon swags and drapes with gold tassels
+const BF = { W: 6.4, y0: 0.88, y1: 4.9 };
+function backFrameTex() {
+  const PW = 1024, PH = Math.round(PW * (BF.y1 - BF.y0) / BF.W), k = PW / BF.W;
+  const X = x => (x + BF.W / 2) * k, Y = y => (BF.y1 - y) * k;
+  const ox0 = X(-SCR_W / 2), ox1 = X(SCR_W / 2), oy0 = Y(SCR_Y + SCR_H / 2), oy1 = Y(SCR_Y - SCR_H / 2);
+  return canvasTex(PW, PH, (c, w, h) => {
+    // walnut surround with grain
+    c.fillStyle = '#4a2814'; c.fillRect(X(-2.45), Y(4.75), X(2.45) - X(-2.45), h);
+    for (let i = 0; i < 300; i++) { c.globalAlpha = 0.1; c.fillStyle = rnd() < 0.5 ? '#6a3c1e' : '#2a140a'; c.fillRect(X(-2.45) + rnd() * (X(2.45) - X(-2.45)), Y(4.75) + rnd() * h, 1 + rnd() * 2, 30 + rnd() * 80); }
+    c.globalAlpha = 1;
+    // ogee arch carved above the screen
+    const ax = X(0), top = Y(4.72), sh = Y(SCR_Y + SCR_H / 2 + 0.28);
+    c.beginPath(); c.moveTo(ox0 - 20, oy0 - 4); c.lineTo(ox0 - 20, sh);
+    c.bezierCurveTo(ox0 - 20, sh - 40, ax - 70, sh - 30, ax, top); c.bezierCurveTo(ax + 70, sh - 30, ox1 + 20, sh - 40, ox1 + 20, sh); c.lineTo(ox1 + 20, oy0 - 4);
+    c.lineWidth = 14; c.strokeStyle = '#5D1A1A'; c.stroke(); c.lineWidth = 3; c.strokeStyle = '#e8b84a'; c.stroke();
+    c.save(); c.setLineDash([2, 8]); c.lineWidth = 5; c.strokeStyle = '#ffd27a'; c.stroke(); c.restore();
+    for (let j = 0; j < 4; j++) for (const sx of [-1, 1]) { c.strokeStyle = '#d9a441'; c.lineWidth = 2; c.beginPath(); c.arc(ax + sx * (60 + j * 70), Y(4.2 - j * 0.04), 10 + j * 2, 0, TAU * 0.8); c.stroke(); }
+    // gold beading on the screen edge
+    c.strokeStyle = '#e8b84a'; c.lineWidth = 6; c.strokeRect(ox0 - 5, oy0 - 5, ox1 - ox0 + 10, oy1 - oy0 + 10);
+    c.strokeStyle = '#2a140a'; c.lineWidth = 3; c.strokeRect(ox0 - 11, oy0 - 11, ox1 - ox0 + 22, oy1 - oy0 + 22);
+    // side drapes, gathered by a gold rope with a tassel
+    const drape = (sx) => {
+      const xo = sx < 0 ? 0 : w, xi = sx < 0 ? ox0 + 26 : ox1 - 26, ty = Y(1.55), tx = sx < 0 ? X(-2.75) : X(2.75);
+      c.beginPath(); c.moveTo(xo, 0); c.lineTo(xi, 0); c.quadraticCurveTo(xi - sx * 4, ty * 0.6, tx, ty); c.quadraticCurveTo(tx + sx * 30, (ty + h) / 2, xi + sx * 30, h); c.lineTo(xo, h); c.closePath();
+      const g = c.createLinearGradient(xo, 0, xi, 0);
+      for (let i = 0; i <= 12; i++) g.addColorStop(i / 12, i % 2 ? '#7a2424' : '#45100e');
+      c.fillStyle = g; c.fill(); c.lineWidth = 3; c.strokeStyle = '#2a0808'; c.stroke();
+      c.strokeStyle = '#e8b84a'; c.lineWidth = 7; c.beginPath(); c.moveTo(tx - sx * 60, ty - 6); c.quadraticCurveTo(tx, ty + 10, tx + sx * 18, ty - 4); c.stroke();
+      tassel(tx + sx * 10, ty + 4, 1.4);
+    };
+    const tassel = (x, y, s) => {
+      c.fillStyle = '#ffc040'; c.beginPath(); c.arc(x, y + 6 * s, 6 * s, 0, TAU); c.fill();
+      c.beginPath(); c.moveTo(x - 7 * s, y + 10 * s); c.lineTo(x + 7 * s, y + 10 * s); c.lineTo(x + 10 * s, y + 34 * s); c.lineTo(x - 10 * s, y + 34 * s); c.closePath(); c.fill();
+      c.strokeStyle = '#a8701a'; c.lineWidth = 1.2; for (let i = -8; i <= 8; i += 3) { c.beginPath(); c.moveTo(x + i * 0.7 * s, y + 13 * s); c.lineTo(x + i * s, y + 34 * s); c.stroke(); }
+    };
+    drape(-1); drape(1);
+    // valance swags across the top of the screen with tassels between them
+    const n = 5, sw = (ox1 - ox0 + 120) / n, vy = oy0 - 30;
+    for (let i = 0; i < n; i++) {
+      const x0 = ox0 - 60 + i * sw, x1 = x0 + sw;
+      c.beginPath(); c.moveTo(x0, vy - 30); c.lineTo(x1, vy - 30); c.lineTo(x1, vy); c.quadraticCurveTo((x0 + x1) / 2, vy + 62, x0, vy); c.closePath();
+      const g = c.createLinearGradient(0, vy - 30, 0, vy + 34); g.addColorStop(0, '#45100e'); g.addColorStop(0.6, '#7a2424'); g.addColorStop(1, '#5D1A1A');
+      c.fillStyle = g; c.fill(); c.strokeStyle = '#ffb000'; c.lineWidth = 3; c.beginPath(); c.moveTo(x1, vy); c.quadraticCurveTo((x0 + x1) / 2, vy + 62, x0, vy); c.stroke();
+    }
+    for (let i = 0; i <= n; i++) tassel(ox0 - 60 + i * sw, vy - 4, 1);
+    c.globalCompositeOperation = 'destination-out'; c.fillRect(ox0, oy0, ox1 - ox0, oy1 - oy0); c.globalCompositeOperation = 'source-over';
+  });
+}
+// multiply decal: warm near the lamp, falling to dark at the edges of the stage
+function poolTex() {
+  return canvasTex(256, 256, (c, w) => {
+    const g = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
+    g.addColorStop(0, '#fff6e2'); g.addColorStop(0.35, '#f0c890'); g.addColorStop(0.75, '#7a5236'); g.addColorStop(1, '#3a2418');
+    c.fillStyle = '#3a2418'; c.fillRect(0, 0, w, w); c.fillStyle = g; c.fillRect(0, 0, w, w);
   });
 }
 function rugTex() {
@@ -1225,6 +1283,12 @@ function buildWorld() {
     const g = new THREE.PlaneGeometry(ry ? d : w, ry ? w : d); g.rotateX(-Math.PI / 2); if (ry) g.rotateY(ry); g.translate(x, 0.006, z); rg.push(g);
   }
   const rugs = new THREE.Mesh(mergeGeometries(rg), new THREE.MeshLambertMaterial({ map: rugTex() })); rugs.receiveShadow = true; scene.add(rugs);
+  const backFrame = new THREE.Mesh(new THREE.PlaneGeometry(BF.W, BF.y1 - BF.y0), new THREE.MeshLambertMaterial({ map: backFrameTex(), alphaTest: 0.5 }));
+  backFrame.rotation.y = Math.PI; backFrame.position.set(0, (BF.y0 + BF.y1) / 2, -0.03); scene.add(backFrame);
+  const poolMat = new THREE.MeshBasicMaterial({ map: poolTex(), blending: THREE.MultiplyBlending, premultipliedAlpha: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const pool = new THREE.Group();
+  for (const [w, d, y, z] of [[5.2, 2.9, 0.932, -1.45], [10, 5.4, 0.012, -2.7]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), poolMat); m.rotation.x = -Math.PI / 2; m.position.set(0, y, z); pool.add(m); }
+  scene.add(pool);
   // hanging brass lanterns with amber glass (separate groups so they can sway)
   const lb = new Bag();
   lb.add(box(0.02, 1.0, 0.02), '#2a1a0a', 0, -0.5, 0); lb.add(cyl(0.04, 0.17, 0.14, 8), '#b8862e', 0, -1.04, 0);
@@ -1667,8 +1731,23 @@ function drawDisplay() {
   if (G.sc && G.sc.timed && V.items.some(it => it.dyn)) ck = G.idx + ':' + V.items.filter(it => !it.dyn).map(it => `${it.i},${it.x.toFixed(3)},${it.y.toFixed(3)},${it.p.toFixed(3)},${it.r.toFixed(3)}`).join(';');
   renderShadows(DISP, V, true, fade, ck);
   const c = DISP.ctx, { W, H } = DISP;
-  c.setTransform(1, 0, 0, 1, 0, 0); if (FILTER_OK) c.filter = 'none';
+  // render-only: dyed leather (grain, outlines, punched dots) overlaid on each lamp's shadow like stained glass
+  c.globalCompositeOperation = 'overlay';
+  for (const L of V.lamps) {
+    if (L.lv * fade < 0.05) continue;
+    c.globalAlpha = Math.min(0.85, 0.8 * L.lv * fade / 2);
+    for (const it of V.items) { const T = TYPES[it.type]; drawItem(c, it, L.x, DISP, T.tex, T.sc, true); }
+  }
+  c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; if (FILTER_OK) c.filter = 'none';
   c.globalCompositeOperation = 'multiply'; c.drawImage(CLOTH, 0, 0);
+  // warm glow where each kandil flame faces the cloth
+  c.globalCompositeOperation = 'screen';
+  for (const L of V.lamps) {
+    const f = L.lv * fade / 2; if (f < 0.05) continue;
+    const gx = W / 2 + DISP.k * L.x, gy = H / 2 - DISP.k * LY, g = c.createRadialGradient(gx, gy, 0, gx, gy, DISP.k * 1.3);
+    g.addColorStop(0, `rgba(${Math.round(255 * L.col[0])},${Math.round(200 * L.col[1])},${Math.round(120 * L.col[2])},${0.3 * f})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+  }
   c.globalCompositeOperation = 'source-over';
   if (ref) {
     c.globalAlpha = 0.9;
