@@ -7,7 +7,9 @@
 <meta name="description" content="A 3D shadow-theatre light puzzle about Karagöz and Hacivat. Claude Game Arena, built by Claude Opus 5.5.">
 <style>
 :root{
-  --bg:#120a06; --ink:#f4e6cc; --ink2:#cdb595; --accent:#B91C1C; --gold:#E9B44C; --green:#79b25e; --blue:#6f8fe0;
+  /* shadow-theatre palette: lamp amber, screen linen, leather dyes, curtain maroon */
+  --amber:#FFB000; --linen:#F3E5C0; --dye-red:#B22222; --dye-green:#2E8B57; --dye-indigo:#283593; --maroon:#5D1A1A;
+  --bg:#140806; --ink:#F3E5C0; --ink2:#d8c29a; --accent:#B22222; --gold:#FFB000; --green:#4fb57a; --blue:#7f8fe0;
   --glass:rgba(34,20,11,.62); --line:rgba(255,226,180,.15);
   --sa-t:env(safe-area-inset-top,0px); --sa-b:env(safe-area-inset-bottom,0px);
 }
@@ -361,7 +363,7 @@ window.addEventListener('error', e => { window.__errs.push(String(e.message || e
 window.addEventListener('unhandledrejection', e => { window.__errs.push('Promise: ' + String(e.reason && e.reason.message || e.reason)); });
 (function () {
   const q = new URLSearchParams(location.search).get('lang');
-  const tr = q ? q === 'tr' : true;
+  const tr = q ? q === 'tr' : /^tr/i.test(navigator.language || '');
   document.getElementById('loadmsg').textContent = tr ? 'Yükleniyor… 0/1' : 'Loading… 0/1';
   setTimeout(() => { if (!window.__loaded) document.getElementById('loadmsg').textContent = tr ? 'Three.js yüklenemedi; internet bağlantısını kontrol et.' : 'Three.js could not load; check your connection.'; }, 20000);
 })();
@@ -386,7 +388,7 @@ const KEY = 'arena.karagoz.';
 function load(k, def) { try { const v = localStorage.getItem(KEY + k); return v ? Object.assign(def, JSON.parse(v)) : def; } catch (e) { return def; } }
 function store(k, v) { if (FLAG.nosave || FLAG.auto) return; try { localStorage.setItem(KEY + k, JSON.stringify(v)); } catch (e) { /* private mode */ } }
 const isPhone = matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 820;
-const SET = load('settings', { master: 0.8, music: 0.6, sfx: 0.8, lang: 'tr', quality: isPhone ? 'low' : 'high', musicOn: true, sfxOn: true, muted: false });
+const SET = load('settings', { master: 0.8, music: 0.6, sfx: 0.8, lang: /^tr/i.test(navigator.language || '') ? 'tr' : 'en', quality: isPhone ? 'low' : 'high', musicOn: true, sfxOn: true, muted: false });
 if (FLAG.lang === 'tr' || FLAG.lang === 'en') SET.lang = FLAG.lang;
 if (FLAG.low) SET.quality = 'low';
 const PROG = load('save', { stars: [], cur: null, hints: 0 });
@@ -900,7 +902,7 @@ function matchOf(sc, st, time) {
 const CLOTH = document.createElement('canvas');
 {
   CLOTH.width = DISP.W; CLOTH.height = DISP.H; const c = CLOTH.getContext('2d'), W = DISP.W, H = DISP.H;
-  c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#fbf0d6'; c.fillRect(0, 0, W, H);
   c.globalAlpha = 0.05; c.fillStyle = '#5a3a20';
   for (let y = 0; y < H; y += 2) c.fillRect(0, y, W, 1);
   c.globalAlpha = 0.03; for (let x = 0; x < W; x += 3) c.fillRect(x, 0, 1, H);
@@ -919,8 +921,8 @@ renderer.setPixelRatio(Math.min(devicePixelRatio || 1, SET.quality === 'low' ? 1
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#0a0604');
-scene.fog = new THREE.Fog('#0a0604', 13, 28);
+scene.background = new THREE.Color('#1c0d07');
+scene.fog = new THREE.Fog('#26120a', 11, 27);
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 60);
 
 let seed = 1234567;
@@ -1084,11 +1086,11 @@ function buildWorld() {
   aud.castShadow = true; aud.receiveShadow = false; scene.add(aud);
   WORLD.audience = seats.map(([x, z, ry], i) => ({ x, z, ry: ry + (Math.abs(x) > 6 ? -Math.sign(x) * 0.6 : 0), y: Math.abs(x) > 6 ? 0.1 : 0, ph: i * 1.7 }));
   // lights
-  const hemi = new THREE.HemisphereLight('#6a4a30', '#140a05', 0.75); scene.add(hemi);
-  const sun = new THREE.DirectionalLight('#ffcf8a', 1.3); sun.position.set(0, 3.2, -0.4); sun.target.position.set(0, 0, 7.5); scene.add(sun, sun.target);
+  const hemi = new THREE.HemisphereLight('#c08850', '#2a1208', 1.05); scene.add(hemi);
+  const sun = new THREE.DirectionalLight('#ffc060', 1.3); sun.position.set(0, 3.2, -0.4); sun.target.position.set(0, 0, 7.5); scene.add(sun, sun.target);
   sun.castShadow = SET.quality !== 'low'; sun.shadow.mapSize.set(1024, 1024);
   Object.assign(sun.shadow.camera, { left: -6.5, right: 6.5, top: 5.5, bottom: -5.5, near: 0.5, far: 12 }); sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.03;
-  for (const [x, z] of LANT.slice(0, 2)) { const pl = new THREE.PointLight('#ffb060', 4, 9, 1.6); pl.position.set(x, 3.9, z); scene.add(pl); }
+  for (const [x, z] of LANT.slice(0, 2)) { const pl = new THREE.PointLight('#ffb000', 7, 11, 1.5); pl.position.set(x, 3.9, z); scene.add(pl); }
   // dust motes in the lamp beams (soft round sprites)
   const nD = SET.quality === 'low' ? 110 : 220, dp = new Float32Array(nD * 3), dv = [];
   for (let i = 0; i < nD; i++) {
@@ -1503,7 +1505,7 @@ function sync3D(dt) {
     const n = Math.max(1e-3, Math.max(r, g, b)); r /= n; g /= n; b /= n;
   }
   WORLD.screenMat.color.setScalar(flick * (1 + G.flash * 0.25));
-  WORLD.sun.intensity = 1.5 * lit * flick; WORLD.sun.color.setRGB(r, g * 0.95, b * 0.9, THREE.SRGBColorSpace);
+  WORLD.sun.intensity = 1.6 * lit * flick; WORLD.sun.color.setRGB(r, g * 0.95, b * 0.9, THREE.SRGBColorSpace);
   // lamps
   LAMPS.forEach((L, i) => {
     if (!L.grp.visible || !G.vis || !G.vis.lamps[i]) return;
