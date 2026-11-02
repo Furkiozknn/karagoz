@@ -1254,6 +1254,18 @@ function buildWorld() {
   const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.BufferAttribute(dp, 3));
   const dust = new THREE.Points(dg, new THREE.PointsMaterial({ size: 0.04, map: SOFT, color: '#ffd9a0', transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }));
   scene.add(dust);
+  // nargile smoke: additive amber wisps that fade in and out through vertex colours
+  const nS = SET.quality === 'low' ? 24 : 54, sp = new Float32Array(nS * 3), sc3 = new Float32Array(nS * 3), sAge = [];
+  for (let i = 0; i < nS; i++) sAge.push({ a: rnd() * 6, life: 4.5 + rnd() * 2.5, src: i % WORLD.smokeSrc.length, ph: rnd() * TAU });
+  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3)); sg.setAttribute('color', new THREE.BufferAttribute(sc3, 3));
+  const smoke = new THREE.Points(sg, new THREE.PointsMaterial({ size: 0.62, map: SOFT, vertexColors: true, color: '#ffd8a8', transparent: true, opacity: 0.12, depthWrite: false, blending: THREE.AdditiveBlending }));
+  smoke.frustumCulled = false; scene.add(smoke);
+  // solve sparks along the bottom of the screen
+  const nK = SET.quality === 'low' ? 30 : 60, kp = new Float32Array(nK * 3), kc = new Float32Array(nK * 3);
+  const kg = new THREE.BufferGeometry(); kg.setAttribute('position', new THREE.BufferAttribute(kp, 3)); kg.setAttribute('color', new THREE.BufferAttribute(kc, 3));
+  const spark = new THREE.Points(kg, new THREE.PointsMaterial({ size: 0.09, map: SOFT, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  spark.frustumCulled = false; spark.visible = false; scene.add(spark);
+  Object.assign(WORLD, { smoke, smokeAge: sAge, spark, sparkV: Array.from({ length: nK }, () => [0, 0, 0, 0]) });
   Object.assign(WORLD, { room, glow, screenTex, screenMat, screenMesh, aud, hemi, sun, dust, dustV: dv });
 }
 buildWorld();
@@ -1477,6 +1489,7 @@ function solve() {
   const total = PROG.stars.reduce((a, b) => a + (b || 0), 0);
   BEST.stars = Math.max(BEST.stars, total); store('best', BEST); saveProg();
   sfx.solve(); setTimeout(() => sfx.applause(2.4, 1), 250); AUDN.clap = 1; AUDN.laugh = 0.4;
+  if (!G.simming) setTimeout(spawnSparks, 380);
   updateHUD(); refreshTray();
 }
 function showResult() {
@@ -1651,8 +1664,17 @@ function drawDisplay() {
   WORLD.screenTex.needsUpdate = true;
 }
 const _col = new THREE.Color();
+function spawnSparks() {
+  const V = WORLD.sparkV, p = WORLD.spark.geometry.attributes.position;
+  for (let i = 0; i < V.length; i++) {
+    p.setXYZ(i, (rnd() - 0.5) * 3.8, SCR_Y - SCR_H / 2 + 0.05 + rnd() * 0.2, 0.08);
+    V[i] = [(rnd() - 0.5) * 0.8, 1.2 + rnd() * 1.6, 0.3 + rnd() * 0.6, 1.2 + rnd() * 0.9];
+  }
+  WORLD.spark.visible = true;
+}
 function sync3D(dt) {
-  const flick = 1 + 0.035 * Math.sin(G.clock * 13.1) + 0.025 * Math.sin(G.clock * 7.3 + 1) + 0.015 * Math.sin(G.clock * 29.7);
+  // oil-lamp flicker: fast shimmer plus a slow breathing gutter
+  const flick = 1 + 0.04 * Math.sin(G.clock * 13.1) + 0.028 * Math.sin(G.clock * 7.3 + 1) + 0.016 * Math.sin(G.clock * 29.7) + 0.035 * Math.sin(G.clock * 2.1) * Math.sin(G.clock * 0.37);
   // screen glow follows the lamps
   let lit = 1, r = 1, g = 0.86, b = 0.62;
   if (G.sc && G.vis && G.screen !== 'title' && G.screen !== 'intro') {
@@ -1670,8 +1692,8 @@ function sync3D(dt) {
     L.grp.position.x = v.x;
     L.light.intensity = 3.2 * f * flick;
     L.flame.visible = f > 0.02; L.halo.visible = f > 0.02;
-    const fl = (0.4 + 0.6 * f) * (1 + 0.08 * Math.sin(G.clock * 17 + i * 3));
-    L.flame.scale.set(0.15 * fl, 0.26 * fl, 1); L.halo.material.opacity = 0.32 * f * flick;
+    const fl = (0.4 + 0.6 * f) * (1 + 0.08 * Math.sin(G.clock * 17 + i * 3) + 0.05 * Math.sin(G.clock * 5.3 + i));
+    L.flame.scale.set(0.15 * fl * (1 - 0.06 * Math.sin(G.clock * 9 + i)), 0.27 * fl, 1); L.flame.position.x = 0.006 * Math.sin(G.clock * 6.1 + i * 2); L.halo.material.opacity = 0.32 * f * flick;
   });
   // puppets
   const k = 1 - Math.exp(-dt * 16);
@@ -1683,7 +1705,8 @@ function sync3D(dt) {
     const c = pp.cur;
     if (s.on && P.track) { c.x = tx; c.y = ty; c.z = tz; c.r = tr; c.s = lerp(c.s, ts, k); }
     else { c.x = lerp(c.x, tx, k); c.y = lerp(c.y, ty, k); c.z = lerp(c.z, tz, k); c.r = lerp(c.r, tr, k); c.s = lerp(c.s, ts, k); }
-    pp.grp.position.set(c.x, c.y, c.z); pp.rot.rotation.z = c.r; pp.rot.scale.setScalar(c.s);
+    // rods sway a little in the puppeteer's hand
+    pp.grp.position.set(c.x, c.y, c.z); pp.rot.rotation.z = c.r + (s.on ? 0.014 * Math.sin(G.clock * 1.7 + i * 1.9) : 0); pp.rot.scale.setScalar(c.s);
     const showStick = s.on && c.s > 0.9;
     pp.stick.visible = showStick;
     if (showStick) {
@@ -1715,6 +1738,27 @@ function sync3D(dt) {
     WORLD.aud.setMatrixAt(i, _m4);
   }
   WORLD.aud.instanceMatrix.needsUpdate = true;
+  // lanterns sway on their chains
+  for (const L of WORLD.lanterns) { L.g.rotation.z = 0.035 * Math.sin(G.clock * 0.9 + L.ph); L.g.rotation.x = 0.025 * Math.sin(G.clock * 0.71 + L.ph * 1.3); }
+  // smoke wisps rise, drift and fade
+  const sp = WORLD.smoke.geometry.attributes.position, sc = WORLD.smoke.geometry.attributes.color, src = WORLD.smokeSrc;
+  WORLD.smokeAge.forEach((a, i) => {
+    a.a += dt; if (a.a > a.life) { a.a = 0; a.ph = rnd() * TAU; }
+    const u = a.a / a.life, o = src[a.src], f = Math.min(1, u * 5) * (1 - u) * (1 - u);
+    sp.setXYZ(i, o[0] + Math.sin(a.ph + u * 5) * 0.12 * (0.3 + u * 2) + u * 0.25, o[1] + u * 2.6, o[2] + Math.cos(a.ph + u * 3) * 0.1 * u);
+    sc.setXYZ(i, f, f * 0.9, f * 0.75);
+  });
+  sp.needsUpdate = true; sc.needsUpdate = true;
+  // solve sparks
+  if (WORLD.spark.visible) {
+    const kp = WORLD.spark.geometry.attributes.position, kc = WORLD.spark.geometry.attributes.color, V = WORLD.sparkV; let alive = false;
+    for (let i = 0; i < V.length; i++) {
+      const v = V[i]; v[3] -= dt; if (v[3] <= 0) { kc.setXYZ(i, 0, 0, 0); continue; } alive = true;
+      v[1] -= dt * 1.8; kp.setXYZ(i, kp.getX(i) + v[0] * dt, kp.getY(i) + v[1] * dt, kp.getZ(i) + v[2] * dt);
+      const f = Math.min(1, v[3]); kc.setXYZ(i, f, f * 0.72, f * 0.25);
+    }
+    kp.needsUpdate = true; kc.needsUpdate = true; WORLD.spark.visible = alive;
+  }
   // dust
   const dp = WORLD.dust.geometry.attributes.position, dv = WORLD.dustV;
   for (let i = 0; i < dv.length; i++) {
