@@ -109,6 +109,9 @@ The live state is on `window.karagoz`.
     <td><img src="docs/05-act-map.png" alt="Act map"><br><sub>Act map</sub></td>
     <td><img src="docs/06-phone.png" alt="Karagöz on a phone"><br><sub>On a phone</sub></td>
   </tr>
+  <tr>
+    <td><img src="docs/07-cafe.png" alt="The coffee house from the audience side"><br><sub>The café, audience side</sub></td>
+  </tr>
 </table>
 
 ## Redesign (2026-11)
@@ -124,6 +127,9 @@ green `#2E8B57` and indigo `#283593`, curtain maroon `#5D1A1A`; translucent tool
 - **Puppets and lamps:** the leather now has grain, darker cut edges and punched dot rows, both on the 3D puppets and
   in their shadows (display only: the match is still scored from the plain shapes); puppets glow like backlit hide and
   sway a little on their rods. The lamps are turned brass kandils with a bulb chimney and a handle.
+- **Stage:** the cloth reads as lamp-lit linen (warm glow on each kandil, darker amber edges, weave, vignette); the leather
+  shadows get a render-only stained-glass overlay with grain, outlines and punched dots; backstage, maroon drapes with
+  gold tassels and a carved ogee arch frame the screen, and the stage floor falls from warm near the lamps to dark edges.
 - **FX:** a slow oil-lamp breathing on top of the flicker, flame wobble, gold sparks along the screen on every solve.
 - **UI:** cut-leather panels with a row of punched holes inside the edge, a maroon curtain valance over every menu,
   a walnut top bar, dye-coloured act cards and dialogue tags; 14 px minimum body text on phones and a compact
@@ -131,7 +137,7 @@ green `#2E8B57` and indigo `#283593`, curtain maroon `#5D1A1A`; translucent tool
 - **Kept:** all 24 scenes, 72 stars, controls, the match maths, the bot, saves (`arena.karagoz.*`), flags, audio and
   i18n. The default language now follows the browser (Turkish for `tr-*`, English otherwise); a saved choice still wins.
 - **Measured** (headless Chrome, Intel UHD 620, 1280×720): static scenes 60 fps before and after; draw calls 18-22 →
-  24-30; timed act IV scenes 39 → 46 fps (they redraw the cloth texture every 30 ms, as before; `?low` gives 60).
+  28-32; timed act IV scenes 39 fps before and after (they redraw the cloth texture every 30 ms, as before; `?low` gives 60).
 
 ## Running locally
 
