@@ -18,6 +18,10 @@
 
 <p align="center"><b>Play online: <a href="https://furkiozknn.github.io/karagoz/">https://furkiozknn.github.io/karagoz/</a></b> (desktop and phone, no install)</p>
 
+<!-- portals:start -->
+<p align="center">Also on: <a href="https://furkiozknn.itch.io/karagoz">itch.io</a></p>
+<!-- portals:end -->
+
 ## Highlights
 
 - **Real shadow optics.** A puppet near the lamp casts a big, soft shadow; near the cloth a small, sharp one. Two lamps
@@ -194,3 +198,5 @@ oynanır. Claude Opus 5.5 tarafından Claude Code ile tek bir prompt'tan yapıld
 ## License
 
 MIT, see [LICENSE](LICENSE).
+
+Like the game? You can support new rounds on [Buy Me a Coffee](https://buymeacoffee.com/furkiozkann). The game stays free.
