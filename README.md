@@ -13,7 +13,7 @@
 <p align="center"><b>A 3D shadow-theatre light puzzle about Karagöz and Hacivat: in a dim Ottoman coffee house at night, slide and turn coloured leather puppets and move the oil lamps until their shadows on the cloth match the story picture.</b></p>
 
 <p align="center">
-  <img src="docs/gameplay.gif" width="640" alt="Karagöz gameplay: moving puppets and lamps behind the shadow screen">
+  <img src="docs/gameplay.gif" width="640" alt="Karagöz gameplay after the redesign: coloured leather puppets and oil lamps move behind the lamp-lit linen screen until the shadows match the gold outline">
 </p>
 
 <p align="center"><b>Play online: <a href="https://furkiozknn.github.io/karagoz/">https://furkiozknn.github.io/karagoz/</a></b> (desktop and phone, no install)</p>
