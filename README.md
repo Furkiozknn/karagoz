@@ -74,7 +74,7 @@ a shadow to slide its puppet; dragging up or down changes the depth.
 | Music / effects / language | HUD buttons | `M` / `X` / `L` |
 
 Settings are saved in `localStorage` under `arena.karagoz.settings`; progress (stars per scene and the scene in
-progress) under `arena.karagoz.save`, the best star total under `arena.karagoz.best`. Turkish is the default language;
+progress) under `arena.karagoz.save`, the best star total under `arena.karagoz.best`. The language follows the browser;
 phones start on the Low tier.
 
 <details>
@@ -110,6 +110,28 @@ The live state is on `window.karagoz`.
     <td><img src="docs/06-phone.png" alt="Karagöz on a phone"><br><sub>On a phone</sub></td>
   </tr>
 </table>
+
+## Redesign (2026-11)
+
+<p align="center"><img src="docs/redesign-before-after.png" width="100%" alt="Before and after the redesign: the backstage view"></p>
+
+**Art direction: traditional shadow theatre.** Lamp amber `#FFB000`, screen linen `#F3E5C0`, leather dyes red `#B22222`,
+green `#2E8B57` and indigo `#283593`, curtain maroon `#5D1A1A`; translucent tooled leather in an oil-lit coffee house.
+
+- **Café:** lime-plaster walls with an İznik-style tile dado and a stencilled frieze, a carved walnut proscenium with an
+  ogee arch and lamp-lit lattice panels, kilims on the floor, swaying brass lanterns with amber glass, nargile pipes
+  with rising smoke, audience in coloured robes, a planked puppet table backstage.
+- **Puppets and lamps:** the leather now has grain, darker cut edges and punched dot rows, both on the 3D puppets and
+  in their shadows (display only: the match is still scored from the plain shapes); puppets glow like backlit hide and
+  sway a little on their rods. The lamps are turned brass kandils with a bulb chimney and a handle.
+- **FX:** a slow oil-lamp breathing on top of the flicker, flame wobble, gold sparks along the screen on every solve.
+- **UI:** cut-leather panels with a row of punched holes inside the edge, a maroon curtain valance over every menu,
+  a walnut top bar, dye-coloured act cards and dialogue tags; 14 px minimum body text on phones and a compact
+  landscape layout.
+- **Kept:** all 24 scenes, 72 stars, controls, the match maths, the bot, saves (`arena.karagoz.*`), flags, audio and
+  i18n. The default language now follows the browser (Turkish for `tr-*`, English otherwise); a saved choice still wins.
+- **Measured** (headless Chrome, Intel UHD 620, 1280×720): static scenes 60 fps before and after; draw calls 18-22 →
+  24-30; timed act IV scenes 39 → 46 fps (they redraw the cloth texture every 30 ms, as before; `?low` gives 60).
 
 ## Running locally
 
