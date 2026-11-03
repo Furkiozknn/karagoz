@@ -24,8 +24,8 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-tap-highlight-color:transparent;
-  touch-action:none;user-select:none;-webkit-user-select:none}
-#c{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none}
+  user-select:none;-webkit-user-select:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none;touch-action:none}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit;cursor:pointer}
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
@@ -54,7 +54,7 @@ svg{display:block}
 .mbar em{position:absolute;left:90%;top:-2px;bottom:-2px;width:2px;background:#fff8;}
 .mwrap.ok b{color:var(--gold)}
 .acts{display:flex;gap:2px}
-.ibtn{width:44px;height:44px;border-radius:12px 4px 12px 4px;border:1px solid transparent;background:transparent;display:inline-flex;align-items:center;
+.ibtn{width:44px;height:44px;min-width:44px;min-height:44px;border-radius:12px 4px 12px 4px;border:1px solid transparent;background:transparent;display:inline-flex;align-items:center;
   justify-content:center;color:var(--ink);font-weight:700;font-size:13px;position:relative}
 .ibtn:hover{background:rgba(255,176,0,.12);border-color:var(--line)}
 .ibtn.on{background:rgba(178,34,34,.55);border-color:rgba(255,176,0,.6)}
@@ -94,18 +94,18 @@ svg{display:block}
   max-width:calc(100vw - 16px);flex-wrap:wrap;justify-content:center}
 .tray .grp{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:center}
 .tray .sep{width:1px;align-self:stretch;background:var(--line)}
-.pbtn{min-width:52px;height:56px;border-radius:12px 4px 12px 4px;border:1px solid #7a4a1e;background:radial-gradient(circle at 50% 40%,rgba(255,220,150,.22),rgba(255,176,0,.04));padding:2px 4px;
+.pbtn{min-width:52px;min-height:44px;height:56px;border-radius:12px 4px 12px 4px;border:1px solid #7a4a1e;background:radial-gradient(circle at 50% 40%,rgba(255,220,150,.22),rgba(255,176,0,.04));padding:2px 4px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;position:relative}
 .pbtn img,.pbtn svg{width:40px;height:40px;object-fit:contain;display:block}
 .pbtn small{position:absolute;top:2px;left:5px;font-size:10px;color:var(--ink2)}
 .pbtn.off{opacity:.45;border-style:dashed}
 .pbtn.sel{border-color:var(--gold);background:radial-gradient(circle at 50% 40%,rgba(255,200,90,.45),rgba(255,176,0,.12));box-shadow:0 0 0 1px var(--gold) inset,0 0 14px rgba(255,176,0,.35)}
 .pbtn.ok::after{content:"";position:absolute;right:5px;top:5px;width:7px;height:7px;border-radius:50%;background:var(--green)}
-.cbtn{width:46px;height:46px;border-radius:12px 4px 12px 4px;border:1px solid #7a4a1e;background:linear-gradient(180deg,#5a2c16,#3a1a0c);display:inline-flex;align-items:center;justify-content:center;color:var(--linen)}
+.cbtn{width:46px;height:46px;min-width:44px;min-height:44px;border-radius:12px 4px 12px 4px;border:1px solid #7a4a1e;background:linear-gradient(180deg,#5a2c16,#3a1a0c);display:inline-flex;align-items:center;justify-content:center;color:var(--linen)}
 .cbtn:hover{background:linear-gradient(180deg,#70381c,#4a2210);color:#fff}
 .cbtn svg{width:22px;height:22px}
 .cbtn:disabled{opacity:.3;cursor:default}
-@media (max-width:760px){.pbtn{min-width:46px;height:50px}.pbtn img,.pbtn svg{width:34px;height:34px}.cbtn{width:44px;height:44px}}
+@media (max-width:760px){.pbtn{min-width:46px;min-height:44px;height:50px}.pbtn img,.pbtn svg{width:34px;height:34px}.cbtn{width:44px;height:44px;min-width:44px;min-height:44px}}
 
 /* toasts */
 .toasts{position:fixed;top:calc(128px + var(--sa-t));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;
@@ -115,6 +115,11 @@ svg{display:block}
 .toast.good{border-left-color:var(--green)} .toast.bad{border-left-color:var(--accent)}
 .toast.out{opacity:0;transform:translateY(-6px);transition:all .3s}
 @keyframes tin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){
+  .toast{animation:none}
+  .toast.out{transition:none}
+  .line{animation:none}
+}
 
 /* overlays */
 .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 45%,rgba(40,10,6,.35),rgba(14,4,2,.72));
@@ -125,7 +130,7 @@ svg{display:block}
 .panel h2{margin:0 0 12px;font-size:25px;color:var(--gold);font-family:Georgia,"Times New Roman",serif;letter-spacing:.03em;text-shadow:0 0 14px rgba(255,176,0,.35)}
 .col{display:flex;flex-direction:column;gap:10px}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.btn{min-height:46px;padding:0 18px;border-radius:14px 4px 14px 4px;border:1px solid #8a5a22;background:linear-gradient(180deg,#5a2c16,#3a1a0c);color:var(--ink);
+.btn{min-width:44px;min-height:46px;padding:0 18px;border-radius:14px 4px 14px 4px;border:1px solid #8a5a22;background:linear-gradient(180deg,#5a2c16,#3a1a0c);color:var(--ink);
   font-weight:700;font-size:16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,transform .15s}
 .btn:hover{background:linear-gradient(180deg,#70381c,#4a2210)}
 .btn:active{transform:translateY(1px)}
@@ -261,11 +266,11 @@ input[type=range]{flex:1;accent-color:var(--accent);height:44px;margin:0}
       <div class="stars" id="s-stars"></div>
     </div>
     <div class="acts">
-      <button class="ibtn" id="b-view" data-tt="viewBtn"><svg><use href="#i-view"/></svg></button>
-      <button class="ibtn" id="b-hint" data-tt="hintBtn"><svg><use href="#i-hint"/></svg></button>
-      <button class="ibtn" id="b-pause" data-tt="pause"><svg><use href="#i-pause"/></svg></button>
-      <button class="ibtn" id="b-sound" data-tt="sound"><svg><use href="#i-sound"/></svg></button>
-      <button class="ibtn" id="b-lang" data-tt="language">EN</button>
+      <button class="ibtn" id="b-view" data-tt="viewBtn" aria-label="Görünüm (Tab / V)"><svg><use href="#i-view"/></svg></button>
+      <button class="ibtn" id="b-hint" data-tt="hintBtn" aria-label="İpucu (H), bir yıldız"><svg><use href="#i-hint"/></svg></button>
+      <button class="ibtn" id="b-pause" data-tt="pause" aria-label="Duraklat (P)"><svg><use href="#i-pause"/></svg></button>
+      <button class="ibtn" id="b-sound" data-tt="sound" aria-label="Ses"><svg><use href="#i-sound"/></svg></button>
+      <button class="ibtn" id="b-lang" data-tt="language" aria-label="Dil">EN</button>
     </div>
   </div>
   <div class="pill glass" id="pill" hidden><b id="p-title"></b><small id="p-tip"></small></div>
