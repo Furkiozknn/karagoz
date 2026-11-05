@@ -862,12 +862,16 @@ const stateFrom = (sc, which) => ({ pcs: sc.pcs.map(P => ({ ...P[which] })), lam
 const snap = st => JSON.stringify(st);
 const unsnap = s => JSON.parse(s);
 
-function poseOf(P, s, time, sc) {
+const _poseScratch = { x: 0, y: 0, p: 0, r: 0 };
+function poseOf(P, s, time, sc, out) {
+  const o = out || { x: 0, y: 0, p: 0, r: 0 };
   if (P.track) {
     const u = frac(time / sc.T + s.ph / 12), q = P.path(u);
-    return { x: q.x, y: P.y + q.dy, p: DEPTH[s.d], r: q.r + s.r * STEP_R };
+    o.x = q.x; o.y = P.y + q.dy; o.p = DEPTH[s.d]; o.r = q.r + s.r * STEP_R;
+    return o;
   }
-  return { x: s.x * 0.1, y: P.y, p: DEPTH[s.d], r: s.r * STEP_R };
+  o.x = s.x * 0.1; o.y = P.y; o.p = DEPTH[s.d]; o.r = s.r * STEP_R;
+  return o;
 }
 // view model: what the screen shows for a state at a moment (vis = smoothed poses for display)
 function viewOf(sc, st, time, vis) {
@@ -1403,13 +1407,14 @@ railHL.visible = false; scene.add(railHL);
 let PUP = [], railMesh = null;
 const _Y = new THREE.Vector3(0, 1, 0), _dir = new THREE.Vector3();
 function railBox(P) {
+  if (P._box) return P._box;
   // world-space box (x0,x1,z0,z1) that a piece's stick foot can travel over
   const zOf = d => -(DEPTH[d] + 0.35);
   const s = P.start, r = P.ref;
-  if (P.track) return [-2.6, 2.6, zOf(r.d) - 0.025, zOf(r.d) + 0.025];
+  if (P.track) return P._box = [-2.6, 2.6, zOf(r.d) - 0.025, zOf(r.d) + 0.025];
   const x0 = P.dofs.x ? P.xr[0] * 0.1 : r.x * 0.1, x1 = P.dofs.x ? P.xr[1] * 0.1 : r.x * 0.1;
   const z0 = P.dofs.d ? zOf(5) : zOf(r.d), z1 = P.dofs.d ? zOf(0) : zOf(r.d);
-  return [x0 - 0.03, x1 + 0.03, z0 - 0.03, z1 + 0.03];
+  return P._box = [x0 - 0.03, x1 + 0.03, z0 - 0.03, z1 + 0.03];
 }
 function buildScene3D(sc) {
   PUP.forEach(pp => { scene.remove(pp.grp); pp.mat.dispose(); });
@@ -1679,22 +1684,28 @@ function updateCamera(dt) {
 // Per-frame simulation (no rendering here so ?sim and the bot can fast-forward)
 // ---------------------------------------------------------------------------
 const AUDN = { laugh: 0, clap: 0 };
+const POSE_KEYS = ['x', 'y', 'p', 'r'];
 function updateVis(dt) {
   if (!G.sc || !G.vis) return;
   const k = 1 - Math.exp(-dt * 14); let moving = false;
-  G.sc.pcs.forEach((P, i) => {
-    const s = G.st.pcs[i], v = G.vis.pcs[i], q = poseOf(P, s, G.time, G.sc);
+  for (let i = 0; i < G.sc.pcs.length; i++) {
+    const P = G.sc.pcs[i], s = G.st.pcs[i], v = G.vis.pcs[i];
+    const q = poseOf(P, s, G.time, G.sc, _poseScratch);
     if (G.wig && G.screen === 'result') {
       const who = { H: 'hacivat', K: 'karagoz', C: 'cin' }[G.wig.who];
       if (P.t === who) { q.r += Math.sin(G.clock * 11) * 0.07 * Math.exp(-G.wig.t * 0.5); q.y += Math.abs(Math.sin(G.clock * 9)) * 0.025 * Math.exp(-G.wig.t * 0.5); }
     }
-    if (Math.abs(q.x - v.x) > 1.5) { Object.assign(v, q); moving = true; return; }
-    for (const key of ['x', 'y', 'p', 'r']) { const d = q[key] - v[key]; if (Math.abs(d) > 1e-4) { v[key] += d * (P.track ? Math.min(1, k * 2.2) : k); moving = true; } else v[key] = q[key]; }
-  });
-  G.sc.lamps.forEach((L, i) => {
+    if (Math.abs(q.x - v.x) > 1.5) { Object.assign(v, q); moving = true; continue; }
+    for (let j = 0; j < 4; j++) {
+      const key = POSE_KEYS[j];
+      const d = q[key] - v[key];
+      if (Math.abs(d) > 1e-4) { v[key] += d * (P.track ? Math.min(1, k * 2.2) : k); moving = true; } else v[key] = q[key];
+    }
+  }
+  for (let i = 0; i < G.sc.lamps.length; i++) {
     const s = G.st.lamps[i], v = G.vis.lamps[i], tx = LAMP_X[s.xi], tl = s.lv;
     if (Math.abs(tx - v.x) > 1e-4 || Math.abs(tl - v.lv) > 1e-3) { v.x += (tx - v.x) * k; v.lv += (tl - v.lv) * k; moving = true; } else { v.x = tx; v.lv = tl; }
-  });
+  }
   if (moving) G.dispDirty = true;
 }
 function update(dt) {
@@ -1728,8 +1739,11 @@ function update(dt) {
 // ---------------------------------------------------------------------------
 // Rendering
 // ---------------------------------------------------------------------------
+const _introV = { lamps: [{ col: LCOL.warm, lv: 2, x: 0 }], NL: 1, items: [{ type: 'gostermelik', x: 0, y: 0, p: DEPTH[3], r: 0 }] };
 function introView() {
-  return { lamps: [{ col: LCOL.warm, lv: 2, x: 0 }], NL: 1, items: [{ type: 'gostermelik', x: G.introX, y: TYPES.gostermelik.b + TYPES.gostermelik.h / 2, p: DEPTH[3], r: 0 }] };
+  _introV.items[0].x = G.introX;
+  _introV.items[0].y = TYPES.gostermelik.b + TYPES.gostermelik.h / 2;
+  return _introV;
 }
 let lastDisp = 0;
 function drawDisplay() {
@@ -1812,7 +1826,7 @@ function sync3D(dt) {
   PUP.forEach((pp, i) => {
     const P = pp.P, s = G.st.pcs[i], v = G.vis.pcs[i];
     let tx, ty, tz, tr, ts;
-    if (s.on) { tx = v.x; ty = SCR_Y + v.y; tz = -v.p; tr = v.r; ts = 1; } else { const q = rackPos(i); tx = q.x; ty = q.y; tz = q.z; tr = 0; ts = 0.48; }
+    if (s.on) { tx = v.x; ty = SCR_Y + v.y; tz = -v.p; tr = v.r; ts = 1; } else { tx = 3.22; ty = 2.05; tz = -0.8 - i * 0.42; tr = 0; ts = 0.48; }
     if (!pp.cur || Math.abs(pp.cur.x - tx) > 1.5 && s.on && P.track) pp.cur = { x: tx, y: ty, z: tz, r: tr, s: ts };
     const c = pp.cur;
     if (s.on && P.track) { c.x = tx; c.y = ty; c.z = tz; c.r = tr; c.s = lerp(c.s, ts, k); }
@@ -1854,12 +1868,13 @@ function sync3D(dt) {
   for (const L of WORLD.lanterns) { L.g.rotation.z = 0.035 * Math.sin(G.clock * 0.9 + L.ph); L.g.rotation.x = 0.025 * Math.sin(G.clock * 0.71 + L.ph * 1.3); }
   // smoke wisps rise, drift and fade
   const sp = WORLD.smoke.geometry.attributes.position, sc = WORLD.smoke.geometry.attributes.color, src = WORLD.smokeSrc;
-  WORLD.smokeAge.forEach((a, i) => {
+  for (let i = 0; i < WORLD.smokeAge.length; i++) {
+    const a = WORLD.smokeAge[i];
     a.a += dt; if (a.a > a.life) { a.a = 0; a.ph = rnd() * TAU; }
     const u = a.a / a.life, o = src[a.src], f = Math.min(1, u * 5) * (1 - u) * (1 - u);
     sp.setXYZ(i, o[0] + Math.sin(a.ph + u * 5) * 0.12 * (0.3 + u * 2) + u * 0.25, o[1] + u * 2.6, o[2] + Math.cos(a.ph + u * 3) * 0.1 * u);
     sc.setXYZ(i, f, f * 0.9, f * 0.75);
-  });
+  }
   sp.needsUpdate = true; sc.needsUpdate = true;
   // solve sparks
   if (WORLD.spark.visible) {
