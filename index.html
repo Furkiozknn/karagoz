@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Karagöz</title>
+<meta name="arena-game" content="karagoz">
 <meta name="description" content="A 3D shadow-theatre light puzzle about Karagöz and Hacivat, redesigned with a lamp-lit linen screen and a coffee-house stage: move puppets and lamps until the shadows match. Plays in the browser.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Karagöz · Shadow Theatre">
@@ -123,6 +124,8 @@ svg{display:block}
 .toast.out{opacity:0;transform:translateY(-8px) scale(0.96);transition:all .35s ease-out}
 @keyframes tin{from{opacity:0;transform:translateY(-10px) scale(0.95)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){.toast{animation:none}.toast.out{transition:none}.line{animation:none}.scn button.next{animation:none}}
+html[data-arena-reduced-motion] :is(.toast,.line,.scn button.next){animation:none}html[data-arena-reduced-motion] .toast.out{transition:none} /* the same from the Arena panel */
+a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
 
 /* Audience View - Handheld Spectator Mirror ("Kandil Aynası") */
 .preview{position:fixed;right:12px;top:calc(148px + var(--sa-t));width:min(28vw,220px);padding:8px;z-index:17;pointer-events:none;
@@ -839,6 +842,7 @@ input[type=range]{flex:1;accent-color:var(--amber);height:44px;margin:0;cursor:p
       <div class="col">
         <button class="btn primary w" id="b-play" disabled><svg><use href="#i-play"/></svg><span data-t="play"></span></button>
         <button class="btn w" id="b-continue" hidden><span data-t="continue"></span> <span id="cont-info"></span></button>
+        <button class="btn w" id="b-daily"><svg><use href="#i-star"/></svg><span data-t="daily"></span> <small id="daily-info"></small></button>
         <div class="row" style="justify-content:center">
           <button class="btn" id="b-settings"><svg><use href="#i-gear"/></svg><span data-t="settings"></span></button>
           <div class="seg" id="seg-lang"><button data-l="tr">TR</button><button data-l="en">EN</button></div>
@@ -882,6 +886,7 @@ input[type=range]{flex:1;accent-color:var(--amber);height:44px;margin:0;cursor:p
       <div class="row"><span class="lbl" data-t="language"></span><div class="seg" id="seg-lang2"><button data-l="tr">TR</button><button data-l="en">EN</button></div></div>
       <div class="row"><span class="lbl" data-t="quality"></span><div class="seg" id="seg-q"><button data-q="low" data-t="low"></button><button data-q="high" data-t="high"></button></div></div>
       <button class="btn w" id="b-full"><svg><use href="#i-full"/></svg><span data-t="fullscreen"></span></button>
+      <button class="btn w" id="b-a11y"><span data-t="a11y"></span></button>
       <button class="btn primary w" id="b-sclose"><svg><use href="#i-back"/></svg><span data-t="back"></span></button>
     </div>
   </div>
@@ -891,8 +896,10 @@ input[type=range]{flex:1;accent-color:var(--amber);height:44px;margin:0;cursor:p
     <div class="panel glass curtain">
       <div class="rhead"><h2 class="serif" id="r-title"></h2><div class="bigstars" id="r-stars"></div></div>
       <div class="rsub" id="r-sub"></div>
+      <div class="rsub" id="r-daily" hidden></div>
       <div class="dlg" id="r-dlg"></div>
       <div class="row" style="justify-content:flex-end">
+        <button class="btn" id="b-rshare"><span data-t="share"></span></button>
         <button class="btn" id="b-rmap"><svg><use href="#i-map"/></svg><span data-t="actMap"></span></button>
         <button class="btn" id="b-replay"><svg><use href="#i-restart"/></svg><span data-t="replay"></span></button>
         <button class="btn primary" id="b-next"><svg><use href="#i-play"/></svg><span id="b-next-t"></span></button>
@@ -914,6 +921,8 @@ input[type=range]{flex:1;accent-color:var(--amber);height:44px;margin:0;cursor:p
         <div><b id="e-best">0</b><span data-t="bestLbl"></span></div>
       </div>
       <button class="btn primary w" id="b-again"><svg><use href="#i-map"/></svg><span data-t="playAgain"></span></button>
+      <button class="btn w" id="b-eshare"><span data-t="share"></span></button>
+      <a class="btn w" id="a-eother" href="https://furkiozknn.github.io/" target="_blank" rel="noopener"><span data-t="another"></span></a>
       <button class="btn w" id="b-emenu"><svg><use href="#i-home"/></svg><span data-t="mainMenu"></span></button>
     </div>
   </div>
@@ -945,6 +954,9 @@ const FLAG = {
   lang: Q.get('lang'), nosave: Q.has('nosave'), scene: parseInt(Q.get('scene') || '0', 10) || 0, noassets: Q.has('noassets'),
   view: Q.get('view'),
 };
+// Arena shared layer (inline classic script above the import map); every use below is optional
+const ARENA = window.Arena && window.Arena.version ? window.Arena : null;
+const GAME_URL = 'https://furkiozknn.github.io/karagoz/';
 // No external asset files: every mesh, texture and sound is generated in code, so ?noassets changes nothing.
 const ASSETS = { used: false, loaded: [], skipped: FLAG.noassets, note: 'procedural only' };
 const KEY = 'arena.karagoz.';
@@ -983,6 +995,12 @@ const I18N = {
     viewBack: 'Perde arkası', viewAud: 'Seyirci tarafı', cueMiss: 'İşaret geçti: %{m}', locked: 'Kilitli', lamp: 'Lamba', lampN: 'Lamba {n}',
     warm: 'yağ lambası', red: 'kızıl camlı lamba', blue: 'mavi camlı lamba', goster: 'Göstermelik kalkıyor, oyun başlıyor…', skip: 'Geçmek için dokun',
     star1: 'Sahneyi çöz', star2: 'Par ya da altı hamle', star3: 'İpucusuz', newIn: 'Yeni: ', H: 'Hacivat', K: 'Karagöz', C: 'Cin',
+    // Arena (ortak katman)
+    daily: 'Günün Meydan Okuması', dailyInfo: 'seri {s} · en iyi {b}', dailyDone: 'bugün tamam', dailyScene: 'Günün sahnesi: {n}',
+    dailyStreak: 'Günün Meydan Okuması · seri {s} gün (en iyi {b})', dailyNote: 'Günlük sahnenin yıldızları perde haritasına yazılmaz.',
+    share: 'Paylaş', another: 'Başka oyun', a11y: 'Erişilebilirlik',
+    shareScene: '{n} · {st}/3 yıldız · {m} hamle', shareDaily: 'Günün Meydan Okuması {d} · seri {s}', shareEnd: '{s}/72 yıldız · {n}/24 sahne',
+    badgeFirst: 'İlk gölge', badge3: 'Üç yıldızlı sahne', badgeAll: 'Perde kapandı',
     candleIn: 'Mumu kuklalara yaklaştır: büyük, yumuşak gölge (↑)', candleOut: 'Mumu geri çek: küçük, keskin gölge (↓)', show: 'Göster (G): alev durulunca',
     shadowSize: 'Gölge boyu', beatReady: 'Uyum tamam: alev durulunca Göster (G)', beatMatch: 'Önce gölgeyi hedefe oturt (%{m})',
     beatOff: 'Gölge boyu tutmadı: %{m}', beatFlick: 'Alev titredi, gölge boyu %{m} kaldı',
@@ -1006,6 +1024,12 @@ const I18N = {
     viewBack: 'Backstage', viewAud: 'Audience side', cueMiss: 'Cue passed: {m}%', locked: 'Locked', lamp: 'Lamp', lampN: 'Lamp {n}',
     warm: 'oil lamp', red: 'red glass lamp', blue: 'blue glass lamp', goster: 'The göstermelik lifts, the play begins…', skip: 'Tap to skip',
     star1: 'Solve the scene', star2: 'Par or fewer moves', star3: 'No hints', newIn: 'New: ', H: 'Hacivat', K: 'Karagöz', C: 'Djinn',
+    // Arena (shared layer)
+    daily: 'Daily challenge', dailyInfo: 'streak {s} · best {b}', dailyDone: 'done today', dailyScene: 'Today\'s scene: {n}',
+    dailyStreak: 'Daily challenge · streak {s} days (best {b})', dailyNote: 'Stars from the daily scene do not go on the act map.',
+    share: 'Share', another: 'Another game', a11y: 'Accessibility',
+    shareScene: '{n} · {st}/3 stars · {m} moves', shareDaily: 'Daily challenge {d} · streak {s}', shareEnd: '{s}/72 stars · {n}/24 scenes',
+    badgeFirst: 'First shadow', badge3: 'Three-star scene', badgeAll: 'The curtain falls',
     candleIn: 'Bring the candle closer to the puppets: bigger, softer shadow (↑)', candleOut: 'Pull the candle back: smaller, sharper shadow (↓)', show: 'Show (G), when the flame is steady',
     shadowSize: 'Shadow size', beatReady: 'Matched: Show (G) while the flame is steady', beatMatch: 'Fit the shadow to the target first ({m}%)',
     beatOff: 'Shadow size is off: {m}%', beatFlick: 'The flame flickered, shadow size {m}%',
@@ -1546,6 +1570,13 @@ const CLOTH = document.createElement('canvas');
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, SET.quality === 'low' ? 1 : 1.5));
+// Arena: dynamic pixel ratio for weak GPUs under the quality tier's cap (re-attached in setQuality, which resets the ratio)
+let arenaPerf = null;
+function arenaPerfAttach() {
+  if (!ARENA) return; if (arenaPerf) arenaPerf.stop();
+  arenaPerf = ARENA.perf.attach(renderer, { max: Math.min(devicePixelRatio || 1, SET.quality === 'low' ? 1 : 1.5) });
+}
+arenaPerfAttach();
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
 const scene = new THREE.Scene();
@@ -2012,6 +2043,7 @@ const G = {
   sc: null, idx: 0, st: null, vis: null, time: 0, clock: 0, moves: 0, hint: false, hist: [], solved: false, solveT: 0, match: 0,
   sel: null, lastMove: { key: null, t: 0 }, paused: false, drag: null, resultT: 0, dlgShown: 0, flash: 0, introT: 0, introX: 0, introSeen: false,
   dispDirty: true, endFade: 0, lastCue: null, hidden: false, simming: false, wig: null,
+  daily: null, share: null, // Arena.daily() of the running daily challenge scene; what the open Share button shares
 };
 function curMatch() { return matchOf(G.sc, G.st, G.sc.timed ? G.sc.tc : 0); }
 function initVis() {
@@ -2044,7 +2076,8 @@ function selList() {
   G.sc.lamps.forEach((L, i) => { if (L.free) out.push({ k: 'l', i }); });
   return out;
 }
-function saveCur() { if (!G.sc) return; PROG.cur = { i: G.idx, s: snap(G.st), m: G.moves, h: G.hint }; saveProg(); }
+// a daily challenge scene never moves the Continue point
+function saveCur() { if (!G.sc || G.daily) return; PROG.cur = { i: G.idx, s: snap(G.st), m: G.moves, h: G.hint }; saveProg(); }
 function canAct() { return G.screen === 'play' && !G.solved && !G.paused; }
 function beginChange(key) {
   const now = G.clock;
@@ -2161,12 +2194,18 @@ function starsNow() { return 1 + (G.moves <= G.sc.par ? 1 : 0) + (G.hint ? 0 : 1
 function solve() {
   if (G.solved) return;
   G.solved = true; G.solveT = 0; G.flash = 1; G.drag = null;
-  const st = starsNow(); PROG.stars[G.idx] = Math.max(PROG.stars[G.idx] || 0, st);
-  if (G.hint) PROG.hints = (PROG.hints || 0) + 1;
-  G.totalMoves = (G.totalMoves || 0) + G.moves;
-  PROG.cur = G.idx < SCENES.length - 1 ? { i: G.idx + 1, s: null } : null;
-  const total = PROG.stars.reduce((a, b) => a + (b || 0), 0);
-  BEST.stars = Math.max(BEST.stars, total); store('best', BEST); saveProg();
+  const st = starsNow();
+  if (G.daily) { // the daily scene may be one the map has not opened yet: it leaves the progress alone and feeds the streak
+    G.dailyRec = G.daily.complete(st * 100 - G.moves);
+  } else {
+    PROG.stars[G.idx] = Math.max(PROG.stars[G.idx] || 0, st);
+    if (G.hint) PROG.hints = (PROG.hints || 0) + 1;
+    G.totalMoves = (G.totalMoves || 0) + G.moves;
+    PROG.cur = G.idx < SCENES.length - 1 ? { i: G.idx + 1, s: null } : null;
+    const total = PROG.stars.reduce((a, b) => a + (b || 0), 0);
+    BEST.stars = Math.max(BEST.stars, total); store('best', BEST); saveProg();
+  }
+  arenaAward('karagoz-first', 'badgeFirst'); if (st === 3) arenaAward('karagoz-3star', 'badge3');
   sfx.solve(); setTimeout(() => sfx.applause(2.4, 1), 250); AUDN.clap = 1; AUDN.laugh = 0.4;
   if (!G.simming) setTimeout(spawnSparks, 380);
   updateHUD(); refreshTray();
@@ -2180,6 +2219,14 @@ function showResult() {
   $('r-sub').textContent = t('solvedSub', { m: G.moves, p: G.sc.par, h: G.hint ? t('hintUsedSub') : '' });
   $('r-dlg').innerHTML = '';
   $('b-next-t').textContent = G.idx < SCENES.length - 1 ? t('nextScene') : t('finale');
+  $('b-next').hidden = !!G.daily; $('r-daily').hidden = !G.daily; $('b-rshare').hidden = !ARENA;
+  const lines = [t('shareScene', { n: L2(G.sc.title), st, m: G.moves })];
+  if (G.daily) {
+    const r = G.dailyRec || ARENA.daily('karagoz');
+    $('r-daily').textContent = t('dailyStreak', { s: r.streak, b: r.best }) + ' · ' + t('dailyNote');
+    lines.unshift(t('shareDaily', { d: dayText(G.daily.day), s: r.streak }));
+  }
+  G.share = { title: 'Karagöz', lines, url: GAME_URL };
   $('ov-result').hidden = false;
   for (let i = 0; i < st; i++) setTimeout(() => sfx.star(i), 200 + i * 220);
 }
@@ -2208,6 +2255,8 @@ function showEnd() {
   $('end-rec').hidden = !rec; $('end-rec').textContent = t('newRecord');
   const dl = $('end-dlg'); dl.innerHTML = '';
   for (const L of SCENES[23].dlg) { const d = document.createElement('div'); d.className = 'line ' + L[0] + (L[0] === 'K' ? ' right' : ''); d.innerHTML = `<b>${t(L[0])}</b><span></span>`; d.querySelector('span').textContent = SET.lang === 'tr' ? L[1] : L[2]; dl.appendChild(d); }
+  G.share = { title: 'Karagöz', lines: [t('shareEnd', { s: total, n: solvedN })], url: GAME_URL };
+  if (solvedN >= SCENES.length) arenaAward('karagoz-perde', 'badgeAll');
   showOnly('ov-end'); sfx.applause(3.5, 1); AUDN.clap = 1.4; AUDN.laugh = 0.6;
   PROG.cur = null; saveProg();
 }
@@ -2791,7 +2840,7 @@ function toast(msg, kind = 'info') {
 }
 function starsHTML(n, of = 3) { return Array.from({ length: of }, (_, i) => `<svg class="${i < n ? 'on' : ''}"><use href="#i-star"/></svg>`).join(''); }
 function applyTexts() {
-  document.documentElement.lang = SET.lang;
+  document.documentElement.lang = SET.lang; if (ARENA) ARENA.lang(SET.lang);
   document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
   document.querySelectorAll('[data-tt]').forEach(el => { el.title = t(el.dataset.tt); el.setAttribute('aria-label', t(el.dataset.tt)); });
   $('b-lang').textContent = SET.lang === 'tr' ? 'EN' : 'TR';
@@ -2800,7 +2849,7 @@ function applyTexts() {
   const ctlT = { 'c-near': 'near', 'c-far': 'far', 'c-rotl': 'rotl', 'c-rotr': 'rotr', 'c-dim': 'dim', 'c-remove': 'remove', 'c-undo': 'undo', 'c-reset': 'reset', 'c-show': 'show' };
   for (const id in ctlT) { $(id).title = t(ctlT[id]); $(id).setAttribute('aria-label', t(ctlT[id])); }
   refreshTitle();
-  if (G.sc) { $('p-title').textContent = `${t('act')} ${ROMAN[G.sc.act]} · ${L2(G.sc.title)}`; $('p-tip').textContent = L2(G.sc.tip); updateHUD(); buildTray(); }
+  if (G.sc) { $('p-title').textContent = (G.daily ? t('daily') + ' · ' : '') + `${t('act')} ${ROMAN[G.sc.act]} · ${L2(G.sc.title)}`; $('p-tip').textContent = L2(G.sc.tip); updateHUD(); buildTray(); }
   if (!$('ov-map').hidden) buildMap();
 }
 function setLang(l) { SET.lang = l; saveSettings(); applyTexts(); }
@@ -2810,6 +2859,12 @@ function refreshTitle() {
   const cur = PROG.cur && SCENES[PROG.cur.i];
   $('b-continue').hidden = !cur;
   if (cur) $('cont-info').textContent = t('contInfo', { a: ROMAN[cur.act], s: cur.idx % 6 + 1 });
+  $('b-daily').hidden = !ARENA;
+  if (ARENA) {
+    const d = ARENA.daily('karagoz'), sc = SCENES[d.seed % SCENES.length];
+    $('daily-info').textContent = '(' + (d.done ? t('dailyDone') + ' · ' : '') + t('dailyInfo', { s: d.streak, b: d.best }) + ')';
+    $('b-daily').title = t('dailyScene', { n: `${t('act')} ${ROMAN[sc.act]} · ${L2(sc.title)}` });
+  }
 }
 function updateHUD() {
   if (!G.sc) return;
@@ -2886,8 +2941,9 @@ function buildMap() {
     el.appendChild(card);
   });
 }
-function openMap() { G.screen = 'map'; showOnly('ov-map'); $('hud').hidden = true; $('tray').hidden = true; $('pill').hidden = true; $('tl').hidden = true; $('preview').hidden = true; $('ov-result').hidden = true; buildMap(); setView('aud', true); G.dispDirty = true; const b = document.querySelector('#acts button.next') || document.querySelector('#acts button:not(:disabled)'); if (b && !FLAG.auto) b.focus(); }
-function openScene(i, restore) {
+function openMap() { G.daily = null; G.screen = 'map'; showOnly('ov-map'); $('hud').hidden = true; $('tray').hidden = true; $('pill').hidden = true; $('tl').hidden = true; $('preview').hidden = true; $('ov-result').hidden = true; buildMap(); setView('aud', true); G.dispDirty = true; const b = document.querySelector('#acts button.next') || document.querySelector('#acts button:not(:disabled)'); if (b && !FLAG.auto) b.focus(); }
+function openScene(i, restore, daily) {
+  G.daily = daily || null; G.dailyRec = null;
   showOnly(null);
   if (!G.introSeen) { G.screen = 'intro'; G.introT = 0; G.introX = 0; G.pendingStart = { i, r: restore }; setView('aud', true); sfx.nareke(0.2); setTimeout(() => sfx.rustle(), 1500); toast(t('goster'), 'info'); return; }
   startScene(i, restore);
@@ -2906,7 +2962,7 @@ function openSettings() {
 function closeSettings() { showOnly(G.settingsFrom); if (G.settingsFrom === 'ov-pause') $('b-resume').focus(); }
 function setQuality(q) {
   SET.quality = q; saveSettings();
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, q === 'low' ? 1 : 1.5)); renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, q === 'low' ? 1 : 1.5)); renderer.setSize(innerWidth, innerHeight); arenaPerfAttach();
   WORLD.sun.castShadow = q !== 'low'; WORLD.dust.visible = true;
   applyTexts();
 }
@@ -2935,9 +2991,23 @@ $('seg-q').addEventListener('click', e => { const b = e.target.closest('button')
 $('b-full').addEventListener('click', () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch (e) { /* not allowed */ } });
 for (const [id, key] of [['r-master', 'master'], ['r-music', 'music'], ['r-sfx', 'sfx']]) $(id).addEventListener('input', e => { SET[key] = +e.target.value; saveSettings(); auVolumes(); });
 for (const [id, a] of [['c-left', 'left'], ['c-right', 'right'], ['c-near', 'near'], ['c-far', 'far'], ['c-rotl', 'rotl'], ['c-rotr', 'rotr'], ['c-dim', 'dim'], ['c-remove', 'remove']]) $(id).addEventListener('click', () => act(a));
+$('b-daily').addEventListener('click', () => { audioInit(); sfx.click(); startDaily(); });
+$('b-a11y').addEventListener('click', () => { sfx.click(); if (ARENA) ARENA.openSettings(); });
+for (const id of ['b-rshare', 'b-eshare']) $(id).addEventListener('click', () => { sfx.click(); if (ARENA && G.share) ARENA.share(G.share); });
+// Daily challenge: the 24 scenes are fixed puzzles, so the UTC day's seed picks today's scene for everybody
+// (?d=YYYYMMDD replays another day). Solving it keeps the streak; the act map and Continue stay as they were.
+function startDaily() { if (!ARENA) return; const d = ARENA.daily('karagoz'); openScene(d.seed % SCENES.length, null, d); }
+function dayText(k) { return `${k % 100}.${Math.floor(k / 100) % 100}.${Math.floor(k / 10000)}`; }
+function arenaAward(id, key) { if (ARENA && !FLAG.auto && !FLAG.nosave) ARENA.award(id, t(key)); }
+if (ARENA) {
+  // The ♿ corner button would sit on the result sheet's Next button and the ending's Main menu button on phones
+  // (390x844), so the panel opens from Settings > Accessibility. A hidden tab already freezes the loop and the audio; in a scene it now also opens the pause menu.
+  ARENA.on('pause', () => { if (!FLAG.auto && G.screen === 'play' && !G.paused && !G.solved) togglePause(); });
+  const others = ARENA.games.filter(g => g !== 'karagoz'); $('a-eother').href = 'https://furkiozknn.github.io/' + others[Math.floor(Date.now() / 86400000) % others.length] + '/';
+} else for (const id of ['b-a11y', 'b-rshare', 'b-eshare', 'a-eother']) $(id).hidden = true;
 $('c-undo').addEventListener('click', undo); $('c-reset').addEventListener('click', resetScene); $('c-show').addEventListener('click', present);
 function toTitle() {
-  G.paused = false; G.screen = 'title'; G.sc = null; G.vis = null; G.sel = null;
+  G.daily = null; G.paused = false; G.screen = 'title'; G.sc = null; G.vis = null; G.sel = null;
   PUP.forEach(pp => { scene.remove(pp.grp); pp.mat.dispose(); }); PUP = []; LAMPS.forEach(L => { L.grp.visible = false; });
   if (railMesh) { scene.remove(railMesh); railMesh.geometry.dispose(); railMesh = null; }
   G.introX = 0; $('hud').hidden = true; $('tray').hidden = true; $('pill').hidden = true; $('tl').hidden = true; $('preview').hidden = true; $('ov-result').hidden = true;
