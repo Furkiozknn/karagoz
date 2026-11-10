@@ -179,6 +179,40 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-conten
   .cbtn{width:44px;height:44px;min-width:44px;min-height:44px}
 }
 
+/* Contextual Touch Gizmo (One-Hand Rotation & Depth Wheel) */
+.gizmo{position:fixed;right:calc(14px + var(--sa-r));bottom:calc(86px + var(--sa-b));width:122px;display:flex;flex-direction:column;
+  align-items:center;gap:6px;padding:7px 7px 9px;z-index:22;touch-action:none;user-select:none;-webkit-user-select:none;pointer-events:auto;
+  box-shadow:0 12px 36px rgba(0,0,0,.75),inset 0 0 0 1px rgba(255,190,90,.16),inset 0 0 24px rgba(255,176,0,.08);
+  transition:opacity .18s ease,transform .18s cubic-bezier(0.2,0.9,0.3,1)}
+.gizmo-tabs{display:flex;gap:4px;width:100%;justify-content:center}
+.gizmo-tab{flex:1;min-height:30px;padding:2px 4px;border-radius:8px 3px 8px 3px;border:1.2px solid rgba(205,181,149,.3);
+  background:rgba(0,0,0,.45);color:var(--ink2);font-size:11px;font-weight:700;letter-spacing:.02em;display:inline-flex;
+  align-items:center;justify-content:center;gap:3px;transition:background .15s,color .15s,border-color .15s,box-shadow .15s}
+.gizmo-tab svg{width:13px;height:13px;stroke-width:2.2}
+.gizmo-tab:hover{background:rgba(255,176,0,.15);color:var(--linen-bright);border-color:var(--gold)}
+.gizmo-tab.on{background:linear-gradient(180deg,#c42a26,#7a1414);color:#fff;border-color:var(--gold);box-shadow:0 0 10px rgba(255,176,0,.4)}
+.gizmo-dial{position:relative;width:106px;height:106px;border-radius:50%;background:radial-gradient(circle at 50% 45%,rgba(60,30,16,.98),rgba(20,9,5,.99));
+  border:2px solid #8e5d26;box-shadow:0 6px 18px rgba(0,0,0,.75),inset 0 0 0 1.5px rgba(255,214,120,.2),inset 0 0 20px rgba(0,0,0,.8);
+  display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
+.gizmo-dial:active{cursor:grabbing}
+.gizmo-rim{position:absolute;inset:3px;border-radius:50%;pointer-events:none;transition:transform .06s linear}
+.gizmo-ticks{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;pointer-events:none}
+.gizmo-indicator{position:absolute;top:2px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;
+  border-right:5px solid transparent;border-top:7px solid var(--gold);filter:drop-shadow(0 1px 2px rgba(0,0,0,.8));pointer-events:none;z-index:2}
+.gizmo-core{width:54px;height:54px;border-radius:50%;background:linear-gradient(180deg,#4a2210,#241006);border:1.5px solid #a8742a;
+  box-shadow:0 2px 8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,214,120,.25);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;color:var(--linen-bright);font-size:11px;font-weight:700;pointer-events:none;text-align:center;line-height:1.15;z-index:1}
+.gizmo-core small{font-size:8.5px;color:var(--gold);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.gizmo-core span{font-size:12px;font-variant-numeric:tabular-nums;color:var(--linen-bright);font-weight:700}
+.gizmo-gauge{display:flex;gap:2px;align-items:center;margin-top:2px}
+.gizmo-gauge i{width:4px;height:4px;border-radius:50%;background:rgba(205,181,149,.3);display:inline-block}
+.gizmo-gauge i.on{background:var(--gold);box-shadow:0 0 4px var(--gold)}
+@media (max-width:760px){
+  .gizmo{right:calc(10px + var(--sa-r));bottom:calc(82px + var(--sa-b));width:114px;padding:5px 5px 7px}
+  .gizmo-dial{width:100px;height:100px}
+  .gizmo-core{width:50px;height:50px}
+}
+
 /* Dialogs & Overlays */
 .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
   background:radial-gradient(ellipse at 50% 50%,rgba(30,12,6,.7),rgba(10,4,2,.92));
@@ -289,6 +323,9 @@ input[type=range]{flex:1;accent-color:var(--amber);height:44px;margin:0;cursor:p
   .title .logo{width:68px;height:68px}
   .title h1{font-size:38px}
   .panel.curtain{padding-top:36px}
+  .gizmo{right:calc(10px + var(--sa-r));bottom:calc(8px + var(--sa-b));width:104px;padding:4px 4px 6px}
+  .gizmo-dial{width:90px;height:90px}
+  .gizmo-core{width:46px;height:46px}
 }
 @media (max-width:420px){
   .title h1{font-size:40px}
@@ -838,6 +875,30 @@ input[type=range]{flex:1;accent-color:var(--amber);height:44px;margin:0;cursor:p
       <button class="cbtn" id="c-reset"><svg><use href="#i-restart"/></svg></button>
     </div>
   </div>
+  <!-- Contextual Touch Gizmo (One-Hand Rotation & Depth Wheel) -->
+  <div class="gizmo glass" id="gizmo" hidden role="region" aria-label="Kukla Çarkı">
+    <div class="gizmo-tabs" id="gz-tabs">
+      <button type="button" class="gizmo-tab on" id="gz-tab-r" aria-label="Döndür">
+        <svg><use href="#i-rotr"/></svg><span data-t="gizmoRotate">Döndür</span>
+      </button>
+      <button type="button" class="gizmo-tab" id="gz-tab-d" aria-label="Derinlik">
+        <svg><use href="#i-far"/></svg><span data-t="gizmoDepth">Derinlik</span>
+      </button>
+    </div>
+    <div class="gizmo-dial" id="gz-dial" aria-label="Ayar Çarkı">
+      <div class="gizmo-indicator"></div>
+      <div class="gizmo-rim" id="gz-rim">
+        <svg class="gizmo-ticks" id="gz-ticks" viewBox="0 0 100 100" aria-hidden="true"></svg>
+      </div>
+      <div class="gizmo-core" id="gz-core">
+        <small id="gz-lbl">DÖNDÜR</small>
+        <span id="gz-val">0°</span>
+        <div class="gizmo-gauge" id="gz-gauge" hidden>
+          <i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="toasts" id="toasts"></div>
   <div id="dbg" hidden></div>
 
@@ -1014,6 +1075,7 @@ const I18N = {
     candleIn: 'Mumu kuklalara yaklaştır: büyük, yumuşak gölge (↑)', candleOut: 'Mumu geri çek: küçük, keskin gölge (↓)', show: 'Göster (G): alev durulunca',
     shadowSize: 'Gölge boyu', beatReady: 'Uyum tamam: alev durulunca Göster (G)', beatMatch: 'Önce gölgeyi hedefe oturt (%{m})',
     beatOff: 'Gölge boyu tutmadı: %{m}', beatFlick: 'Alev titredi, gölge boyu %{m} kaldı',
+    gizmoRotate: 'Döndür', gizmoDepth: 'Derinlik', touchGizmo: 'Kukla Çarkı',
   },
   en: {
     subtitle: 'A shadow-theatre light puzzle', play: 'Play', continue: 'Continue', settings: 'Settings', actMap: 'Act Map',
@@ -1043,6 +1105,7 @@ const I18N = {
     candleIn: 'Bring the candle closer to the puppets: bigger, softer shadow (↑)', candleOut: 'Pull the candle back: smaller, sharper shadow (↓)', show: 'Show (G), when the flame is steady',
     shadowSize: 'Shadow size', beatReady: 'Matched: Show (G) while the flame is steady', beatMatch: 'Fit the shadow to the target first ({m}%)',
     beatOff: 'Shadow size is off: {m}%', beatFlick: 'The flame flickered, shadow size {m}%',
+    gizmoRotate: 'Rotate', gizmoDepth: 'Depth', touchGizmo: 'Puppet Wheel',
   },
 };
 function t(k, vars) {
@@ -2054,6 +2117,7 @@ const G = {
   sel: null, lastMove: { key: null, t: 0 }, paused: false, drag: null, resultT: 0, dlgShown: 0, flash: 0, introT: 0, introX: 0, introSeen: false,
   dispDirty: true, endFade: 0, lastCue: null, hidden: false, simming: false, wig: null,
   daily: null, share: null, // Arena.daily() of the running daily challenge scene; what the open Share button shares
+  touchMode: isPhone || (typeof window !== 'undefined' && (('ontouchstart' in window && navigator.maxTouchPoints > 0) || matchMedia('(pointer:coarse)').matches || innerWidth <= 760)),
 };
 function curMatch() { return matchOf(G.sc, G.st, G.sc.timed ? G.sc.tc : 0); }
 function initVis() {
@@ -2222,7 +2286,7 @@ function solve() {
 }
 function showResult() {
   G.screen = 'result'; G.resultT = 0; G.dlgShown = 0;
-  $('tray').hidden = true; $('tl').hidden = true; $('preview').hidden = true;
+  $('tray').hidden = true; $('tl').hidden = true; $('preview').hidden = true; if ($('gizmo')) $('gizmo').hidden = true;
   const st = starsNow();
   $('r-title').textContent = t('solved') + ' · ' + L2(G.sc.title);
   $('r-stars').innerHTML = [0, 1, 2].map(i => `<svg class="${i < st ? 'on' : ''}"><use href="#i-star"/></svg>`).join('');
@@ -2257,6 +2321,7 @@ function nextScene() {
 function showEnd() {
   G.screen = 'end'; G.endFade = 0;
   $('hud').hidden = true; $('tray').hidden = true; $('pill').hidden = true; $('tl').hidden = true; $('preview').hidden = true; $('ov-result').hidden = true;
+  if ($('gizmo')) $('gizmo').hidden = true;
   setView('aud');
   const total = PROG.stars.reduce((a, b) => a + (b || 0), 0), solvedN = PROG.stars.filter(Boolean).length;
   const rec = total >= BEST.stars && total > (BEST.prevEnd || 0);
@@ -2299,6 +2364,7 @@ function setView(v, instant) {
   $('b-view').classList.toggle('on', v === 'aud');
   $('preview').hidden = !(v === 'back' && (G.screen === 'play'));
   G.dispDirty = true;
+  if (typeof refreshGizmoVal === 'function') refreshGizmoVal();
 }
 function toggleView() { if (G.screen !== 'play') return; G.prefView = G.view === 'back' ? 'aud' : 'back'; setView(G.prefView); toast(t(G.prefView === 'back' ? 'viewBack' : 'viewAud'), 'info'); }
 G.camLook = new THREE.Vector3();
@@ -2590,6 +2656,7 @@ function onDown(e) {
   if (G.screen === 'intro') { G.introT = Math.max(G.introT, 2.6); return; }
   if (G.screen === 'result') { if (G.dlgShown < G.sc.dlg.length) G.resultT = G.dlgShown * 2.1 + 0.01; return; }
   if (!canAct()) return;
+  if (e.pointerType === 'touch' && !G.touchMode) { G.touchMode = true; updateGizmo(); }
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
   if (pointers.size === 2) { G.drag = null; const [a, b] = [...pointers.values()]; G.twist = { a0: Math.atan2(b.y - a.y, b.x - a.x), acc: 0 }; return; }
@@ -2610,7 +2677,9 @@ function onDown(e) {
 function onMove(e) {
   if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (G.twist && pointers.size === 2) {
-    const [a, b] = [...pointers.values()], ang = Math.atan2(b.y - a.y, b.x - a.x);
+    const [a, b] = [...pointers.values()];
+    if (Math.hypot(b.x - a.x, b.y - a.y) < 32) return; // avoid multi-touch pinch collision errors
+    const ang = Math.atan2(b.y - a.y, b.x - a.x);
     let d = ang - G.twist.a0; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU;
     if (Math.abs(d) > STEP_R) { act(d < 0 ? 'rotl' : 'rotr'); G.twist.a0 = ang; }
     return;
@@ -2841,7 +2910,7 @@ const sfx = {
 // UI
 // ---------------------------------------------------------------------------
 const $ = id => document.getElementById(id);
-function showOnly(id) { for (const o of ['ov-title', 'ov-map', 'ov-pause', 'ov-settings', 'ov-end']) $(o).hidden = o !== id; }
+function showOnly(id) { for (const o of ['ov-title', 'ov-map', 'ov-pause', 'ov-settings', 'ov-end']) $(o).hidden = o !== id; if (id && $('gizmo')) $('gizmo').hidden = true; }
 function toast(msg, kind = 'info') {
   if (G.simming) return;
   const el = document.createElement('div'); el.className = 'toast glass ' + kind; el.textContent = msg;
@@ -2858,6 +2927,15 @@ function applyTexts() {
   $('seg-q').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.q === SET.quality));
   const ctlT = { 'c-near': 'near', 'c-far': 'far', 'c-rotl': 'rotl', 'c-rotr': 'rotr', 'c-dim': 'dim', 'c-remove': 'remove', 'c-undo': 'undo', 'c-reset': 'reset', 'c-show': 'show' };
   for (const id in ctlT) { $(id).title = t(ctlT[id]); $(id).setAttribute('aria-label', t(ctlT[id])); }
+  if ($('gizmo')) {
+    $('gz-tab-r').title = t('gizmoRotate');
+    $('gz-tab-r').setAttribute('aria-label', t('gizmoRotate'));
+    $('gz-tab-d').title = t('gizmoDepth');
+    $('gz-tab-d').setAttribute('aria-label', t('gizmoDepth'));
+    $('gizmo').setAttribute('aria-label', t('touchGizmo'));
+    $('gz-dial').setAttribute('aria-label', t('touchGizmo'));
+    if (typeof refreshGizmoVal === 'function') refreshGizmoVal();
+  }
   refreshTitle();
   if (G.sc) { $('p-title').textContent = (G.daily ? t('daily') + ' · ' : '') + `${t('act')} ${ROMAN[G.sc.act]} · ${L2(G.sc.title)}`; $('p-tip').textContent = L2(G.sc.tip); updateHUD(); buildTray(); }
   if (!$('ov-map').hidden) buildMap();
@@ -2929,6 +3007,179 @@ function refreshTray() {
   $('c-left').title = t(track ? 'earlier' : 'left'); $('c-right').title = t(track ? 'later' : 'right');
   $('c-left').setAttribute('aria-label', $('c-left').title); $('c-right').setAttribute('aria-label', $('c-right').title);
   $('c-undo').disabled = !G.hist.length || !canAct(); $('b-hint').disabled = !canAct();
+  updateGizmo();
+}
+
+// ---------------------------------------------------------------------------
+// Contextual Touch Gizmo (One-Hand Rotation & Depth Wheel)
+// ---------------------------------------------------------------------------
+let gzMode = 'r';
+let gzDrag = null;
+
+function initGizmoTicks() {
+  const ticksSvg = $('gz-ticks');
+  if (!ticksSvg || ticksSvg.children.length) return;
+  let paths = '';
+  for (let k = 0; k < 24; k++) {
+    const a = k * Math.PI / 12;
+    const r1 = 46, r2 = (k % 6 === 0 ? 35 : 40);
+    const x1 = (50 + r1 * Math.cos(a)).toFixed(2);
+    const y1 = (50 + r1 * Math.sin(a)).toFixed(2);
+    const x2 = (50 + r2 * Math.cos(a)).toFixed(2);
+    const y2 = (50 + r2 * Math.sin(a)).toFixed(2);
+    const stroke = k % 6 === 0 ? '#ffb000' : 'rgba(205,181,149,0.45)';
+    const sw = k % 6 === 0 ? '2.2' : '1.3';
+    paths += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round"/>`;
+  }
+  paths += '<circle cx="50" cy="50" r="46" fill="none" stroke="rgba(205,181,149,0.22)" stroke-width="1.2"/>';
+  ticksSvg.innerHTML = paths;
+}
+
+function refreshGizmoVal() {
+  if (!G.sc || !G.sel || G.sel.k !== 'p' || !G.st || !G.st.pcs[G.sel.i]) return;
+  const P = G.sc.pcs[G.sel.i], o = G.st.pcs[G.sel.i];
+  const rim = $('gz-rim'), lbl = $('gz-lbl'), val = $('gz-val'), gauge = $('gz-gauge');
+  if (!rim || !lbl || !val || !gauge) return;
+  const flip = G.view === 'back' ? -1 : 1;
+  if (gzMode === 'r') {
+    lbl.textContent = t('gizmoRotate');
+    const deg = Math.round((o.r || 0) * 15);
+    val.textContent = (deg > 0 ? '+' : '') + deg + '°';
+    gauge.hidden = true;
+    rim.style.transform = `rotate(${(o.r || 0) * 15 * flip}deg)`;
+  } else {
+    lbl.textContent = t('gizmoDepth');
+    const curD = o.d || 0;
+    val.textContent = (curD + 1) + ' / 6';
+    gauge.hidden = false;
+    gauge.querySelectorAll('i').forEach((dot, idx) => dot.classList.toggle('on', idx <= curD));
+    rim.style.transform = `rotate(${curD * 40}deg)`;
+  }
+}
+
+function updateGizmo() {
+  const gz = $('gizmo');
+  if (!gz) return;
+  const show = canAct() && G.sel && G.sel.k === 'p' && G.st && G.st.pcs[G.sel.i] && G.st.pcs[G.sel.i].on && (G.touchMode || isPhone || matchMedia('(pointer:coarse)').matches || innerWidth <= 760);
+  if (!show) { gz.hidden = true; return; }
+  const P = G.sc.pcs[G.sel.i];
+  const hasR = !!P.dofs.r, hasD = !!P.dofs.d;
+  if (!hasR && !hasD) { gz.hidden = true; return; }
+  initGizmoTicks();
+  gz.hidden = false;
+  $('gz-tab-r').hidden = !hasR;
+  $('gz-tab-d').hidden = !hasD;
+  if (!hasR && gzMode === 'r') gzMode = 'd';
+  if (!hasD && gzMode === 'd') gzMode = 'r';
+  $('gz-tab-r').classList.toggle('on', gzMode === 'r');
+  $('gz-tab-d').classList.toggle('on', gzMode === 'd');
+  refreshGizmoVal();
+}
+
+function bindGizmoEvents() {
+  const dial = $('gz-dial');
+  if (!dial) return;
+  dial.addEventListener('pointerdown', e => {
+    audioInit();
+    if (!canAct() || !G.sel || G.sel.k !== 'p') return;
+    e.preventDefault();
+    e.stopPropagation();
+    dial.setPointerCapture && dial.setPointerCapture(e.pointerId);
+    const rect = dial.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const a0 = Math.atan2(e.clientY - cy, e.clientX - cx);
+    gzDrag = {
+      pointerId: e.pointerId,
+      cx, cy,
+      aPrev: a0,
+      aAccum: 0,
+      yPrev: e.clientY,
+      yAccum: 0,
+      moved: false,
+      mode: gzMode,
+    };
+  });
+
+  dial.addEventListener('pointermove', e => {
+    if (!gzDrag || gzDrag.pointerId !== e.pointerId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const d = gzDrag;
+    const curA = Math.atan2(e.clientY - d.cy, e.clientX - d.cx);
+    let dAngle = curA - d.aPrev;
+    if (dAngle > Math.PI) dAngle -= Math.PI * 2;
+    if (dAngle < -Math.PI) dAngle += Math.PI * 2;
+    d.aPrev = curA;
+    d.aAccum += dAngle;
+
+    const dy = e.clientY - d.yPrev;
+    d.yPrev = e.clientY;
+    d.yAccum += dy;
+
+    if (Math.abs(d.aAccum) > 0.04 || Math.abs(d.yAccum) > 6) d.moved = true;
+
+    const flip = G.view === 'back' ? -1 : 1;
+    if (d.mode === 'r') {
+      const rim = $('gz-rim'), o = G.st.pcs[G.sel.i];
+      if (rim && o) rim.style.transform = `rotate(${(o.r * 15 + d.aAccum * 180 / Math.PI) * flip}deg)`;
+      if (Math.abs(d.aAccum) >= STEP_R) {
+        const stepDir = d.aAccum * flip > 0 ? 'rotr' : 'rotl';
+        act(stepDir);
+        d.aAccum -= Math.sign(d.aAccum) * STEP_R;
+        if (navigator.vibrate && (!ARENA || ARENA.settings.vibration !== false)) navigator.vibrate(8);
+        refreshGizmoVal();
+      }
+    } else {
+      if (Math.abs(d.aAccum) >= STEP_R) {
+        act(d.aAccum > 0 ? 'far' : 'near');
+        d.aAccum -= Math.sign(d.aAccum) * STEP_R;
+        if (navigator.vibrate && (!ARENA || ARENA.settings.vibration !== false)) navigator.vibrate(8);
+        refreshGizmoVal();
+      } else if (Math.abs(d.yAccum) >= 22) {
+        act(d.yAccum < 0 ? 'far' : 'near');
+        d.yAccum -= Math.sign(d.yAccum) * 22;
+        if (navigator.vibrate && (!ARENA || ARENA.settings.vibration !== false)) navigator.vibrate(8);
+        refreshGizmoVal();
+      }
+    }
+  });
+
+  const onGizmoUp = e => {
+    if (!gzDrag || (e && gzDrag.pointerId !== e.pointerId)) return;
+    const d = gzDrag;
+    gzDrag = null;
+    if (!d.moved) {
+      const P = G.sc && G.sc.pcs[G.sel.i];
+      if (P && P.dofs.r && P.dofs.d) {
+        gzMode = gzMode === 'r' ? 'd' : 'r';
+        $('gz-tab-r').classList.toggle('on', gzMode === 'r');
+        $('gz-tab-d').classList.toggle('on', gzMode === 'd');
+        sfx.click();
+        refreshGizmoVal();
+      }
+    }
+    refreshGizmoVal();
+  };
+  dial.addEventListener('pointerup', onGizmoUp);
+  dial.addEventListener('pointercancel', onGizmoUp);
+
+  $('gz-tab-r').addEventListener('click', e => {
+    e.stopPropagation();
+    gzMode = 'r';
+    $('gz-tab-r').classList.add('on');
+    $('gz-tab-d').classList.remove('on');
+    sfx.click();
+    refreshGizmoVal();
+  });
+  $('gz-tab-d').addEventListener('click', e => {
+    e.stopPropagation();
+    gzMode = 'd';
+    $('gz-tab-d').classList.add('on');
+    $('gz-tab-r').classList.remove('on');
+    sfx.click();
+    refreshGizmoVal();
+  });
 }
 function buildMap() {
   const el = $('acts'); el.innerHTML = '';
@@ -2951,7 +3202,7 @@ function buildMap() {
     el.appendChild(card);
   });
 }
-function openMap() { G.daily = null; G.screen = 'map'; showOnly('ov-map'); $('hud').hidden = true; $('tray').hidden = true; $('pill').hidden = true; $('tl').hidden = true; $('preview').hidden = true; $('ov-result').hidden = true; buildMap(); setView('aud', true); G.dispDirty = true; const b = document.querySelector('#acts button.next') || document.querySelector('#acts button:not(:disabled)'); if (b && !FLAG.auto) b.focus(); }
+function openMap() { G.daily = null; G.screen = 'map'; showOnly('ov-map'); $('hud').hidden = true; $('tray').hidden = true; $('pill').hidden = true; $('tl').hidden = true; $('preview').hidden = true; $('ov-result').hidden = true; if ($('gizmo')) $('gizmo').hidden = true; buildMap(); setView('aud', true); G.dispDirty = true; const b = document.querySelector('#acts button.next') || document.querySelector('#acts button:not(:disabled)'); if (b && !FLAG.auto) b.focus(); }
 function openScene(i, restore, daily) {
   G.daily = daily || null; G.dailyRec = null;
   showOnly(null);
@@ -3016,11 +3267,13 @@ if (ARENA) {
   const others = ARENA.games.filter(g => g !== 'karagoz'); $('a-eother').href = 'https://furkiozknn.github.io/' + others[Math.floor(Date.now() / 86400000) % others.length] + '/';
 } else for (const id of ['b-a11y', 'b-rshare', 'b-eshare', 'a-eother']) $(id).hidden = true;
 $('c-undo').addEventListener('click', undo); $('c-reset').addEventListener('click', resetScene); $('c-show').addEventListener('click', present);
+bindGizmoEvents();
 function toTitle() {
   G.daily = null; G.paused = false; G.screen = 'title'; G.sc = null; G.vis = null; G.sel = null;
   PUP.forEach(pp => { scene.remove(pp.grp); pp.mat.dispose(); }); PUP = []; LAMPS.forEach(L => { L.grp.visible = false; });
   if (railMesh) { scene.remove(railMesh); railMesh.geometry.dispose(); railMesh = null; }
   G.introX = 0; $('hud').hidden = true; $('tray').hidden = true; $('pill').hidden = true; $('tl').hidden = true; $('preview').hidden = true; $('ov-result').hidden = true;
+  if ($('gizmo')) $('gizmo').hidden = true;
   showOnly('ov-title'); refreshTitle(); setView('aud', true); G.dispDirty = true; $('b-play').focus();
 }
 $('preview').appendChild(DISP.cv);
@@ -3028,7 +3281,11 @@ document.addEventListener('visibilitychange', () => {
   G.hidden = document.hidden;
   if (AU.ctx) { if (document.hidden) AU.ctx.suspend(); else AU.ctx.resume(); }
 });
-addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); fitCams(); });
+addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); fitCams();
+  if (innerWidth <= 760 && !G.touchMode) G.touchMode = true;
+  updateGizmo();
+});
 
 // ---------------------------------------------------------------------------
 // Bot (?auto): reads the same match % a player sees, tries one change at a time, commits the best
@@ -3132,7 +3389,7 @@ window.karagozSim = (seconds) => {
   for (let i = 0; i < n; i++) { update(1 / 30); if (BOT.done) break; }
   G.simming = false; exportState(); return window.karagoz;
 };
-window.karagozDebug = { G, SCENES, matchOf, TYPES, botThink: () => botThink(), viewOf, renderShadows, mkTarget, stateFrom, scaleOf, LAMP_DIST, DEPTH, LCOL, LY, SCR_W, LAMP_R, beatScore, beatHeight, flameGust, present, afterChange };
+window.karagozDebug = { G, SCENES, matchOf, TYPES, botThink: () => botThink(), viewOf, renderShadows, mkTarget, stateFrom, scaleOf, LAMP_DIST, DEPTH, LCOL, LY, SCR_W, LAMP_R, beatScore, beatHeight, flameGust, present, afterChange, updateGizmo };
 function debugText() {
   const e = window.__errs;
   $('dbg').innerHTML = `fps ${DBG.fps}  calls ${DBG.calls}  tris ${DBG.tris}\n${DBG.gpu}\nscreen ${G.screen}  scene ${G.sc ? G.idx + 1 : '-'}  match ${(G.match * 100).toFixed(1)}%  moves ${G.moves}\nbot steps ${BOT.steps} hints ${BOT.hints} ${BOT.done ? 'DONE' : ''}  filter ${FILTER_OK}` +
