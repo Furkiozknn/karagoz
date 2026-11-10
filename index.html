@@ -97,6 +97,7 @@ svg{display:block}
   .topbar{flex-wrap:wrap;padding:6px 8px;gap:6px}
   .brand span{display:none}
   .stats{gap:8px;font-size:13px;order:3;flex-basis:100%;justify-content:space-around;padding-top:4px;border-top:1px solid rgba(205,181,149,.15)}
+  .stats{flex-wrap:wrap;row-gap:4px} /* phone: the beat scenes (4, 16) add "Gölge boyu"; the stats wrap to a second row instead of running off the right edge */
   .stats > div{padding:2px 8px}
   .acts{margin-left:auto}
   .mbar{width:56px}
@@ -109,12 +110,12 @@ svg{display:block}
   box-shadow:0 10px 30px rgba(0,0,0,.7),inset 0 0 0 1px rgba(255,214,120,.25)}
 .pill b{display:block;font-family:'Cinzel',Georgia,serif;font-size:15px;color:var(--gold);letter-spacing:.04em;text-shadow:0 1px 4px rgba(0,0,0,.8)}
 .pill small{display:block;font-size:13.5px;color:var(--linen-bright);font-weight:500;margin-top:3px;line-height:1.45;text-shadow:0 1px 3px rgba(0,0,0,.9)}
-@media (max-width:760px){.pill{top:calc(112px + var(--sa-t));padding:6px 14px}.pill small{font-size:13px}}
+@media (max-width:760px){.pill{top:calc(var(--hud-b,108px) + 4px);padding:6px 14px}.pill small{font-size:13px}} /* --hud-b: measured bottom of the top bar */
 
 /* Toasts - Positioned Top-Right so they NEVER overlap the center instruction pill! */
 .toasts{position:fixed;top:calc(76px + var(--sa-t));right:16px;left:auto;transform:none;display:flex;flex-direction:column;gap:8px;
   align-items:flex-end;z-index:28;pointer-events:none;width:max-content;max-width:min(88vw,380px)}
-@media (max-width:760px){.toasts{top:calc(160px + var(--sa-t));right:10px;left:10px;align-items:center}}
+@media (max-width:760px){.toasts{top:calc(var(--hud-b,117px) + 43px);right:10px;left:10px;align-items:center}}
 .toast{padding:10px 20px;border-radius:12px 4px 12px 4px;font-weight:600;font-size:14px;line-height:1.35;animation:tin .28s cubic-bezier(0.16,1,0.3,1);
   border:1.5px solid #8e5d26;border-left:5px solid var(--gold);
   background:linear-gradient(170deg,rgba(54,26,14,.98),rgba(26,12,6,.98));color:var(--linen-bright);
@@ -130,6 +131,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-conten
 /* Audience View - Handheld Spectator Mirror ("Kandil Aynası") */
 .preview{position:fixed;right:12px;top:calc(148px + var(--sa-t));width:min(28vw,220px);padding:8px;z-index:17;pointer-events:none;
   border:2px solid #8e5d26;box-shadow:0 12px 32px rgba(0,0,0,.7),0 0 0 1px rgba(255,214,120,.2) inset}
+@media (max-width:760px){.preview{top:calc(var(--hud-b,117px) + 31px)}}
 .preview span{display:block;font-family:'Cinzel',Georgia,serif;font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--gold);margin:0 0 6px 2px;text-shadow:0 1px 3px rgba(0,0,0,.8)}
 .preview canvas{display:block;width:100%;height:auto;border-radius:8px;border:2px solid #5D1A1A;box-shadow:inset 0 0 12px rgba(0,0,0,.8)}
 @media (max-width:760px){.preview{top:auto;bottom:calc(210px + var(--sa-b));width:36vw}}
@@ -899,7 +901,7 @@ input[type=range]{flex:1;accent-color:var(--amber);height:44px;margin:0;cursor:p
       </div>
     </div>
   </div>
-  <div class="toasts" id="toasts"></div>
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
   <div id="dbg" hidden></div>
 
   <!-- Title -->
@@ -3374,6 +3376,9 @@ if (FLAG.debug) {
   $('dbg').hidden = false;
   try { const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info'); DBG.gpu = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : 'unknown'; } catch (e) { DBG.gpu = '?'; }
 }
+// the top bar wraps to two rows on phones: keep --hud-b (its bottom edge) current for the pill, toasts and preview under it
+{ const hud = $('hud'), setHudB = () => { if (!hud.hidden) document.documentElement.style.setProperty('--hud-b', Math.round(hud.getBoundingClientRect().bottom) + 'px'); };
+  if (window.ResizeObserver) new ResizeObserver(setHudB).observe(hud); addEventListener('resize', setHudB); if (document.fonts) document.fonts.ready.then(setHudB); }
 window.karagoz = {};
 function exportState() {
   Object.assign(window.karagoz, {
