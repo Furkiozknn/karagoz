@@ -41,12 +41,17 @@ branch; manual run: `--baseline`).
 
 ## This game (karagoz)
 
-Ported from kale-savunmasi's `tools/gate.mjs` (only the `GAME` block differs). The timing paragraph above is
-kale's. **Here one sim run takes 235-295 s** (the bot scores every candidate move with the real shadow-match
-renderer, 24 scenes) at load average 10-15: `--only sim` with an identical base about 10 min, `--record` 606 s.
-A PR whose base differs needs 3 sim runs (~12-15 min here), close to the 15 min watchdog and the job's
-`timeout-minutes: 15`. The CI runner's speed is not measured yet; if the job times out it prints `infra: … timed out`
-(a FAIL, never a pass) and the sim should be cut down (fewer scenes) rather than the timeouts raised blindly.
+Ported from kale-savunmasi's `tools/gate.mjs`: the `GAME` block, plus one optional hook in the core,
+`GAME.browserArgs` (extra Chromium flags; a config without it launches exactly as kale's). The timing paragraph above
+is kale's.
+
+Sim runtime: the bot scores every candidate move with `matchOf()`, which draws the puppet sprites into an 80x52
+`willReadFrequently` (CPU) canvas and reads it back with `getImageData`. The sprites themselves sit on GPU-accelerated
+canvases, so under SwiftShader each draw is a GPU readback: a CPU profile put 97 % of a run in `getImageData`
+(234 of 241 s here; CI measured ~295 s a run, 11m12s for a gate with 2 runs, and a PR needing 3 runs would pass
+`timeout-minutes: 15`). `browserArgs: ['--disable-accelerated-2d-canvas']` keeps every 2D canvas on the CPU: a run
+takes ~10 s, with the same 24 scenes, the same metrics (64 stars, perScene 332233323313323331333333) and no change
+to the game. `sim.timeoutMs` is back to kale's 240 s.
 
 - **sim**: `?auto&noassets`. The bot goes title → map → scene → result → next for all 24 scenes, reading the same
   match % a player sees; saves are off under `?auto`. `window.karagozSim(60)` runs `update()` at 1/30 s and is
