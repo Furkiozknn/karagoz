@@ -29,6 +29,11 @@ const GAME = {
   // CDN modules (import map). `pkg` cuts the URL down to a path inside the npm package for SMOKE_CDN_DIR.
   cdn: { match: /cdn\.jsdelivr\.net\/npm\/three@/, pkg: /three@[^/]+\// },
   ignored: /gc\.zgo\.at|goatcounter|fonts\.googleapis\.com|fonts\.gstatic\.com/, // answered with an empty 200
+  // Extra Chromium flags (optional). The bot scores every candidate move with matchOf(), which draws the puppet
+  // sprites into an 80x52 willReadFrequently (CPU) canvas and reads it back. The sprites live on GPU-accelerated
+  // canvases, so with SwiftShader every draw is a GPU readback: 97 % of a sim run (~240 s here, ~295 s in CI) was spent
+  // there. With all 2D canvases on the CPU a run takes ~10 s; the game code is unchanged and the metrics are identical.
+  browserArgs: ['--disable-accelerated-2d-canvas'],
   sim: {
     // ?auto: the bot plays all 24 scenes from the title (map -> scene -> result -> next), reading the same match % a
     // player sees; saves are off under ?auto. window.karagozSim(s) runs update() at 1/30 s and stops when the bot is done.
@@ -43,7 +48,7 @@ const GAME = {
     },
     // stars already carry the par and no-hint stars (1 solve + 1 par + 1 no hint per scene); overPar/hints/moves are info
     tolerance: { scenes: { abs: 0 }, stars: { abs: 1 }, overPar: { info: true }, hints: { info: true }, moves: { info: true }, done: { info: true }, perScene: { info: true }, gameErrors: { max: 0 } },
-    timeoutMs: 600000,
+    timeoutMs: 240000, // a run takes ~10 s with browserArgs (was ~295 s in CI without)
   },
   layout: {
     query: '?scene=4&noassets', // scene 4 (a size-beat scene, the widest top bar) opened directly, HUD and tray up
@@ -166,7 +171,7 @@ const frames = (page, n, ms = 20000) => page.evaluate(([n, ms]) => new Promise((
   const f = () => (++i >= n || performance.now() > end ? done(i) : requestAnimationFrame(f)); requestAnimationFrame(f);
 }), [n, ms]);
 
-const browser = await chromium.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const browser = await chromium.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', ...(GAME.browserArgs || [])] });
 log(`gate ${GAME.name}: chromium ${browser.version()}, candidate ${candFile === join(root, GAME.entry) ? GAME.entry + ' (working tree)' : candFile} sha ${sha(builds.cand)}`);
 
 function consoleCheck(what, errors) {
