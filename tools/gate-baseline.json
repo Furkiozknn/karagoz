@@ -1,0 +1,17 @@
+{
+  "game": "karagoz",
+  "recorded": "2026-11-10T00:41:02.515Z",
+  "commit": "992adf1",
+  "entrySha": "1e28e04ce910",
+  "run": "() => { for (let i = 0; i < 100 && !window.karagoz.bot?.done; i++) window.karagozSim(60); }",
+  "metrics": {
+    "scenes": 24,
+    "stars": 64,
+    "overPar": 5,
+    "hints": 24,
+    "moves": 120,
+    "done": true,
+    "perScene": "332233323313323331333333",
+    "gameErrors": 0
+  }
+}
