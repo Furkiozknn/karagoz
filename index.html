@@ -1704,7 +1704,11 @@ function matchOf(sc, st, time) {
   let mn = 0, mx = 0;
   for (let i = 0; i < tg.length; i++) { const a = DK_CUR[i], b = tg[i]; if (a < b) { mn += a; mx += b; } else { mn += b; mx += a; } }
   const J = mx < 1e-6 ? 1 : mn / mx, F = 1 - Math.abs(B - TARGET.B) / Math.max(B, TARGET.B, 1e-6);
-  return J * F;
+  const m = J * F;
+  if (st === G.st && G.screen === 'play' && !G.paused && !G.solved && !G.simming && (typeof BOT === 'undefined' || !BOT.thinking)) {
+    updateProximityAudio(m, J);
+  }
+  return m;
 }
 
 // cloth weave + vignette for the display screen
@@ -2353,6 +2357,7 @@ function starsNow() { return 1 + (G.moves <= G.sc.par ? 1 : 0) + (G.hint ? 0 : 1
 function solve() {
   if (G.solved) return;
   G.solved = true; G.solveT = 0; G.flash = 1; G.drag = null;
+  silenceProximityAudio();
   const st = starsNow();
   if (G.daily) { // the daily scene may be one the map has not opened yet: it leaves the progress alone and feeds the streak
     G.dailyRec = G.daily.complete(st * 100 - G.moves);
@@ -2866,9 +2871,14 @@ addEventListener('keydown', e => {
 // ---------------------------------------------------------------------------
 // Audio: ney + tef loop in makam Hicaz, synthesised one-shots
 // ---------------------------------------------------------------------------
-const AU = { ctx: null, master: null, music: null, sfx: null, noise: null, next: 0, step: 0 };
+const AU = { ctx: null, master: null, music: null, sfx: null, noise: null, next: 0, step: 0, prox: null };
 function audioInit() {
-  if (AU.ctx) { if (AU.ctx.state === 'suspended' && !G.hidden) AU.ctx.resume(); return; }
+  if (AU.ctx) {
+    if (AU.ctx.state === 'suspended' && !G.hidden) {
+      AU.ctx.resume().then(() => { if (G.sc && G.screen === 'play') updateProximityAudio(G.match, G.match); }).catch(() => {});
+    }
+    return;
+  }
   const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
   try { AU.ctx = new AC(); } catch (e) { return; }
   const c = AU.ctx;
@@ -2883,6 +2893,12 @@ function audioInit() {
     const g = c.createGain(); g.gain.value = g0; const lfo = c.createOscillator(); lfo.frequency.value = 0.13; const lg = c.createGain(); lg.gain.value = g0 * 0.4;
     lfo.connect(lg); lg.connect(g.gain); o.connect(g); g.connect(AU.music); o.start(); lfo.start();
   }
+  // Proximity audio feedback: subtle rising ney/drone tone on puppet alignment
+  const pxOsc = c.createOscillator(); pxOsc.type = 'triangle'; pxOsc.frequency.value = 293.66;
+  const pxLp = c.createBiquadFilter(); pxLp.type = 'lowpass'; pxLp.frequency.value = 1300;
+  const pxGain = c.createGain(); pxGain.gain.value = 0.0001;
+  pxOsc.connect(pxLp); pxLp.connect(pxGain); pxGain.connect(AU.sfx); pxOsc.start();
+  AU.prox = { osc: pxOsc, gain: pxGain, filter: pxLp };
   auVolumes(); AU.next = c.currentTime + 0.15;
   setInterval(musicTick, 60);
 }
@@ -2891,7 +2907,33 @@ function auVolumes() {
   AU.master.gain.setTargetAtTime(SET.muted ? 0 : SET.master, n, 0.05);
   AU.music.gain.setTargetAtTime(SET.musicOn ? SET.music * 0.55 : 0, n, 0.1);
   AU.sfx.gain.setTargetAtTime(SET.sfxOn ? SET.sfx : 0, n, 0.05);
+  if (SET.muted || !SET.sfxOn) silenceProximityAudio();
+  else if (G.sc && G.screen === 'play') updateProximityAudio(G.match, G.match);
   $('b-sound').innerHTML = `<svg><use href="#${SET.muted ? 'i-mute' : 'i-sound'}"/></svg>`;
+}
+const PROX_TARGET = 0.90;
+const PROX_RANGE = 0.10; // within 10% of target (0.80 .. 0.90)
+function updateProximityAudio(match, J) {
+  if (!AU.ctx || !AU.prox || G.simming) return;
+  const c = AU.ctx;
+  if (c.state !== 'running') return;
+  const now = c.currentTime;
+  const inPlay = G.screen === 'play' && !G.paused && !G.solved;
+  const score = match !== undefined ? match : (J !== undefined ? J : 0);
+  if (inPlay && score >= PROX_TARGET - PROX_RANGE && SET.sfxOn && !SET.muted) {
+    const progress = clamp((score - (PROX_TARGET - PROX_RANGE)) / PROX_RANGE, 0, 1.25);
+    const freq = 293.66 * Math.pow(2, progress);
+    const vol = 0.012 + 0.038 * Math.min(1, progress);
+    AU.prox.osc.frequency.setTargetAtTime(freq, now, 0.035);
+    AU.prox.gain.gain.setTargetAtTime(vol, now, 0.045);
+  } else {
+    AU.prox.gain.gain.setTargetAtTime(0.0001, now, 0.04);
+  }
+}
+function silenceProximityAudio() {
+  if (AU.ctx && AU.prox && AU.ctx.state === 'running') {
+    AU.prox.gain.gain.setTargetAtTime(0.0001, AU.ctx.currentTime, 0.03);
+  }
 }
 const HICAZ = [293.66, 311.13, 369.99, 392.0, 440.0, 466.16, 523.25, 587.33, 622.25];
 const MEL_BARS = [
@@ -3288,7 +3330,7 @@ function buildMap() {
     el.appendChild(card);
   });
 }
-function openMap() { G.daily = null; G.screen = 'map'; showOnly('ov-map'); $('hud').hidden = true; $('tray').hidden = true; $('pill').hidden = true; $('tl').hidden = true; $('preview').hidden = true; $('ov-result').hidden = true; if ($('gizmo')) $('gizmo').hidden = true; buildMap(); setView('aud', true); G.dispDirty = true; const b = document.querySelector('#acts button.next') || document.querySelector('#acts button:not(:disabled)'); if (b && !FLAG.auto) b.focus(); }
+function openMap() { silenceProximityAudio(); G.daily = null; G.screen = 'map'; showOnly('ov-map'); $('hud').hidden = true; $('tray').hidden = true; $('pill').hidden = true; $('tl').hidden = true; $('preview').hidden = true; $('ov-result').hidden = true; if ($('gizmo')) $('gizmo').hidden = true; buildMap(); setView('aud', true); G.dispDirty = true; const b = document.querySelector('#acts button.next') || document.querySelector('#acts button:not(:disabled)'); if (b && !FLAG.auto) b.focus(); }
 function openScene(i, restore, daily) {
   G.daily = daily || null; G.dailyRec = null;
   showOnly(null);
@@ -3298,7 +3340,7 @@ function openScene(i, restore, daily) {
 function togglePause() {
   if (G.screen !== 'play' && G.screen !== 'result') return;
   G.paused = !G.paused;
-  if (G.paused) { showOnly('ov-pause'); $('b-resume').focus(); } else showOnly(null);
+  if (G.paused) { silenceProximityAudio(); showOnly('ov-pause'); $('b-resume').focus(); } else { showOnly(null); if (G.sc) updateProximityAudio(G.match, G.match); }
   refreshTray();
 }
 function openSettings() {
@@ -3355,6 +3397,7 @@ if (ARENA) {
 $('c-undo').addEventListener('click', undo); $('c-reset').addEventListener('click', resetScene); $('c-show').addEventListener('click', present);
 bindGizmoEvents();
 function toTitle() {
+  silenceProximityAudio();
   G.daily = null; G.paused = false; G.screen = 'title'; G.sc = null; G.vis = null; G.sel = null;
   PUP.forEach(pp => { scene.remove(pp.grp); pp.mat.dispose(); }); PUP = []; LAMPS.forEach(L => { L.grp.visible = false; });
   if (railMesh) { scene.remove(railMesh); railMesh.geometry.dispose(); railMesh = null; }
@@ -3365,7 +3408,7 @@ function toTitle() {
 $('preview').appendChild(DISP.cv);
 document.addEventListener('visibilitychange', () => {
   G.hidden = document.hidden;
-  if (AU.ctx) { if (document.hidden) AU.ctx.suspend(); else AU.ctx.resume(); }
+  if (AU.ctx) { if (document.hidden) { silenceProximityAudio(); AU.ctx.suspend(); } else AU.ctx.resume(); }
 });
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); fitCams();
@@ -3376,7 +3419,7 @@ addEventListener('resize', () => {
 // ---------------------------------------------------------------------------
 // Bot (?auto): reads the same match % a player sees, tries one change at a time, commits the best
 // ---------------------------------------------------------------------------
-const BOT = { t: 0.5, done: false, steps: 0, hints: 0, log: [], sceneSteps: 0 };
+const BOT = { t: 0.5, done: false, steps: 0, hints: 0, log: [], sceneSteps: 0, thinking: false };
 function botDofs() {
   const out = [];
   G.sc.pcs.forEach((P, i) => {
@@ -3408,27 +3451,32 @@ function botBest(tm, skip) {
 // what the bot maximises: the match, and in size beats also the steady shadow size (1 once it is in band)
 function botEval(tm) { const m = matchOf(G.sc, G.st, tm); return G.sc.beat ? m * Math.min(1, beatScore(G.sc, G.st) / (1 - BEAT_TOL)) : m; }
 function botThink() {
-  const tm = G.sc.timed ? G.sc.tc : 0, base = botEval(tm);
-  let best = botBest(tm);
-  if ((!best || best.m < base + 0.01) && BOT.sceneSteps < 25) {
-    // two-move lookahead through lamp, depth and placement changes: they move or scale every shadow at once
-    for (const D of botDofs()) {
-      if (!['xi', 'lv', 'zi', 'd', 'on'].includes(D.key)) continue;
-      const tgt = D.s.k === 'p' ? G.st.pcs[D.s.i] : G.st.lamps[D.s.i], cur = tgt[D.key];
-      for (const v of D.vals) {
-        if (v === cur) continue;
-        tgt[D.key] = v; const b2 = botBest(tm, D); tgt[D.key] = cur;
-        if (b2 && b2.m > base + 0.01 && (!best || b2.m > best.m + 0.005)) best = { D, v, m: b2.m };
+  BOT.thinking = true;
+  try {
+    const tm = G.sc.timed ? G.sc.tc : 0, base = botEval(tm);
+    let best = botBest(tm);
+    if ((!best || best.m < base + 0.01) && BOT.sceneSteps < 25) {
+      // two-move lookahead through lamp, depth and placement changes: they move or scale every shadow at once
+      for (const D of botDofs()) {
+        if (!['xi', 'lv', 'zi', 'd', 'on'].includes(D.key)) continue;
+        const tgt = D.s.k === 'p' ? G.st.pcs[D.s.i] : G.st.lamps[D.s.i], cur = tgt[D.key];
+        for (const v of D.vals) {
+          if (v === cur) continue;
+          tgt[D.key] = v; const b2 = botBest(tm, D); tgt[D.key] = cur;
+          if (b2 && b2.m > base + 0.01 && (!best || b2.m > best.m + 0.005)) best = { D, v, m: b2.m };
+        }
       }
     }
+    BOT.sceneSteps++;
+    if (best && best.m > base + 0.004 && BOT.sceneSteps <= 25) {
+      G.sel = best.D.s; G.lastMove = { key: null, t: 0 };
+      if (best.D.key === 'on') { if (G.st.pcs[best.D.s.i].on !== best.v) togglePlace(best.D.s.i); }
+      else change(best.D.s, best.D.key, best.v, G.simming);
+      BOT.steps++; refreshTray();
+    } else { BOT.hints++; useHint(); }
+  } finally {
+    BOT.thinking = false;
   }
-  BOT.sceneSteps++;
-  if (best && best.m > base + 0.004 && BOT.sceneSteps <= 25) {
-    G.sel = best.D.s; G.lastMove = { key: null, t: 0 };
-    if (best.D.key === 'on') { if (G.st.pcs[best.D.s.i].on !== best.v) togglePlace(best.D.s.i); }
-    else change(best.D.s, best.D.key, best.v, G.simming);
-    BOT.steps++; refreshTray();
-  } else { BOT.hints++; useHint(); }
 }
 function botUpdate(dt) {
   if (BOT.done) return;
@@ -3478,7 +3526,7 @@ window.karagozSim = (seconds) => {
   for (let i = 0; i < n; i++) { update(1 / 30); if (BOT.done) break; }
   G.simming = false; exportState(); return window.karagoz;
 };
-window.karagozDebug = { G, SCENES, matchOf, TYPES, botThink: () => botThink(), viewOf, renderShadows, mkTarget, stateFrom, scaleOf, LAMP_DIST, DEPTH, LCOL, LY, SCR_W, LAMP_R, beatScore, beatHeight, flameGust, present, afterChange, updateGizmo };
+window.karagozDebug = { G, SCENES, matchOf, TYPES, botThink: () => botThink(), viewOf, renderShadows, mkTarget, stateFrom, scaleOf, LAMP_DIST, DEPTH, LCOL, LY, SCR_W, LAMP_R, beatScore, beatHeight, flameGust, present, afterChange, updateGizmo, AU, updateProximityAudio, silenceProximityAudio };
 function debugText() {
   const e = window.__errs;
   $('dbg').innerHTML = `fps ${DBG.fps}  calls ${DBG.calls}  tris ${DBG.tris}\n${DBG.gpu}\nscreen ${G.screen}  scene ${G.sc ? G.idx + 1 : '-'}  match ${(G.match * 100).toFixed(1)}%  moves ${G.moves}\nbot steps ${BOT.steps} hints ${BOT.hints} ${BOT.done ? 'DONE' : ''}  filter ${FILTER_OK}` +
