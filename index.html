@@ -1116,7 +1116,9 @@ const GAME_URL = 'https://furkiozknn.github.io/karagoz/';
 // No external asset files: every mesh, texture and sound is generated in code, so ?noassets changes nothing.
 const ASSETS = { used: false, loaded: [], skipped: FLAG.noassets, note: 'procedural only' };
 const KEY = 'arena.karagoz.';
-function load(k, def) { try { const v = localStorage.getItem(KEY + k); return v ? Object.assign(def, JSON.parse(v)) : def; } catch (e) { return def; } }
+// a stored value is used only when its root is a plain object (a corrupted or foreign value such as null, a number, a string
+// or an array falls back to the defaults); field types are checked after loading (PROG/BEST below, PROG.cur after SCENES)
+function load(k, def) { try { const v = localStorage.getItem(KEY + k); const o = v ? JSON.parse(v) : null; return o && typeof o === 'object' && !Array.isArray(o) ? Object.assign(def, o) : def; } catch (e) { return def; } }
 function store(k, v) { if (FLAG.nosave || FLAG.auto) return; try { localStorage.setItem(KEY + k, JSON.stringify(v)); } catch (e) { /* private mode */ } }
 const isPhone = matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 820;
 const SET = load('settings', { master: 0.8, music: 0.6, sfx: 0.8, lang: /^tr/i.test(navigator.language || '') ? 'tr' : 'en', quality: isPhone ? 'low' : 'high', musicOn: true, sfxOn: true, muted: false });
@@ -1124,6 +1126,11 @@ if (FLAG.lang === 'tr' || FLAG.lang === 'en') SET.lang = FLAG.lang;
 if (FLAG.low) SET.quality = 'low';
 const PROG = load('save', { stars: [], cur: null, hints: 0 });
 const BEST = load('best', { stars: 0, done: false, moves: 0 });
+// saved progress may be corrupted or edited by hand: stars must be an array of 0..3 numbers so the totals cannot crash startup
+PROG.stars = Array.isArray(PROG.stars) ? PROG.stars.map(v => { v = Math.round(Number(v)); return Number.isFinite(v) ? Math.max(0, Math.min(3, v)) : 0; }) : [];
+if (!Number.isFinite(PROG.hints)) PROG.hints = 0;
+if (!Number.isFinite(BEST.stars)) BEST.stars = 0;
+if (BEST.prevEnd !== undefined && !Number.isFinite(BEST.prevEnd)) BEST.prevEnd = 0;
 if (FLAG.auto || FLAG.nosave) { PROG.stars = []; PROG.cur = null; }
 function saveSettings() { store('settings', SET); }
 function saveProg() { store('save', PROG); }
@@ -1586,6 +1593,20 @@ SCENES.forEach((sc, idx) => {
 const stateFrom = (sc, which) => ({ pcs: sc.pcs.map(P => ({ ...P[which] })), lamps: sc.lamps.map(L => ({ ...L[which] })) });
 const snap = st => JSON.stringify(st);
 const unsnap = s => JSON.parse(s);
+// the Continue point of a corrupted save: drop it when the scene index is not a valid integer, and drop only its board
+// snapshot (the scene restarts from its start) when that no longer parses into this scene's pieces and lamps
+(function checkCur() {
+  const c = PROG.cur;
+  if (c === null || c === undefined) return;
+  if (typeof c !== 'object' || !Number.isInteger(c.i) || c.i < 0 || c.i >= SCENES.length) { PROG.cur = null; return; }
+  if (c.s !== null && c.s !== undefined) {
+    let st = null; try { st = typeof c.s === 'string' ? unsnap(c.s) : null; } catch (e) { st = null; }
+    const sc = SCENES[c.i];
+    if (!st || !Array.isArray(st.pcs) || !Array.isArray(st.lamps) || st.pcs.length !== sc.pcs.length || st.lamps.length !== sc.lamps.length
+      || st.pcs.some(o => !o || typeof o !== 'object') || st.lamps.some(o => !o || typeof o !== 'object')) c.s = null;
+  }
+  if (c.s && !Number.isFinite(c.m)) c.m = 0;
+})();
 
 const _poseScratch = { x: 0, y: 0, p: 0, r: 0 };
 function poseOf(P, s, time, sc, out) {
