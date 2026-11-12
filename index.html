@@ -1628,7 +1628,13 @@ function mkTarget(w, h, read) {
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   return { cv, ctx: cv.getContext('2d', read ? { willReadFrequently: true } : undefined), W: w, H: h, k: w / SCR_W, layers: [], read, lo: w < 200 };
 }
-const DISP = SET.quality === 'low' ? mkTarget(448, 291, false) : mkTarget(640, 416, false);
+const dispSize = q => q === 'low' ? [448, 291] : [640, 416];
+function disposeTarget(TG) {
+  if (!TG) return;
+  for (const list of [TG.layers, TG.cache]) if (list) for (const l of list) if (l && l.cv) l.cv.width = l.cv.height = 0;
+  if (TG.cv) TG.cv.width = TG.cv.height = 0;
+}
+const DISP = mkTarget(...dispSize(SET.quality), false);
 const EVAL = mkTarget(80, 52, true);
 const rgbStr = (c, f) => `rgb(${Math.round(c[0] * f * 255)},${Math.round(c[1] * f * 255)},${Math.round(c[2] * f * 255)})`;
 function itemXf(it, lx, k, W, H, D = LAMP_D) {
@@ -1652,7 +1658,11 @@ function renderShadows(TG, V, display, fade = 1, cacheKey = null) {
   V.lamps.forEach((L, li) => {
     const lv = L.lv * fade; if (lv <= 0.002) return;
     let ly = TG.layers[li];
-    if (!ly) { const cv = document.createElement('canvas'); cv.width = W; cv.height = H; ly = TG.layers[li] = { cv, ctx: cv.getContext('2d', TG.read ? { willReadFrequently: true } : undefined) }; }
+    if (!ly || ly.cv.width !== W || ly.cv.height !== H) {
+      if (ly && ly.cv) ly.cv.width = ly.cv.height = 0;
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      ly = TG.layers[li] = { cv, ctx: cv.getContext('2d', TG.read ? { willReadFrequently: true } : undefined) };
+    }
     const c = ly.ctx;
     const paintBase = (cc, items) => {
       cc.setTransform(1, 0, 0, 1, 0, 0); cc.globalAlpha = 1; cc.globalCompositeOperation = 'source-over'; if (FILTER_OK) cc.filter = 'none';
@@ -1669,7 +1679,11 @@ function renderShadows(TG, V, display, fade = 1, cacheKey = null) {
       // timed scenes: static puppets are baked once per lamp, only the moving ones are drawn each frame
       TG.cache = TG.cache || [];
       let C = TG.cache[li];
-      if (!C) { const cv = document.createElement('canvas'); cv.width = W; cv.height = H; C = TG.cache[li] = { cv, ctx: cv.getContext('2d'), key: '' }; }
+      if (!C || C.cv.width !== W || C.cv.height !== H) {
+        if (C && C.cv) C.cv.width = C.cv.height = 0;
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        C = TG.cache[li] = { cv, ctx: cv.getContext('2d'), key: '' };
+      }
       const key = cacheKey + '|' + L.x.toFixed(3) + '|' + lv.toFixed(3) + '|' + (L.D || LAMP_D).toFixed(3);
       if (C.key !== key) { paintBase(C.ctx, V.items.filter(it => !it.dyn)); if (FILTER_OK) C.ctx.filter = 'none'; C.key = key; }
       c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; if (FILTER_OK) c.filter = 'none';
@@ -1711,10 +1725,10 @@ function matchOf(sc, st, time) {
   return m;
 }
 
-// cloth weave + vignette for the display screen
-const CLOTH = document.createElement('canvas');
-{
-  CLOTH.width = DISP.W; CLOTH.height = DISP.H; const c = CLOTH.getContext('2d'), W = DISP.W, H = DISP.H;
+// cloth weave + vignette for the display screen (rebuilt on quality change)
+function buildCloth(W, H) {
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
   c.fillStyle = '#fbf0d6'; c.fillRect(0, 0, W, H);
   c.globalAlpha = 0.07; c.fillStyle = '#5a3a20';
   for (let y = 0; y < H; y += 2) c.fillRect(0, y, W, 1);
@@ -1724,7 +1738,9 @@ const CLOTH = document.createElement('canvas');
   c.globalAlpha = 1;
   const g = c.createRadialGradient(W / 2, H * 0.55, H * 0.25, W / 2, H * 0.55, W * 0.62);
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(70,32,8,0.55)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  return cv;
 }
+let CLOTH = buildCloth(DISP.W, DISP.H);
 
 // ---------------------------------------------------------------------------
 // Three.js world
@@ -3352,7 +3368,21 @@ function closeSettings() { showOnly(G.settingsFrom); if (G.settingsFrom === 'ov-
 function setQuality(q) {
   SET.quality = q; saveSettings();
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, q === 'low' ? 1 : 1.5)); renderer.setSize(innerWidth, innerHeight); arenaPerfAttach();
-  WORLD.sun.castShadow = q !== 'low'; WORLD.dust.visible = true;
+  // rebuild quality-dependent shadow-screen target (DISP), cloth overlay (CLOTH) and Three.js screen texture; dispose old ones
+  const [w, h] = dispSize(q), prevCv = DISP.cv, next = mkTarget(w, h, false);
+  if (prevCv && prevCv.parentNode) prevCv.parentNode.replaceChild(next.cv, prevCv);
+  disposeTarget(DISP);
+  Object.assign(DISP, next); delete DISP.cache;
+  if (CLOTH) CLOTH.width = CLOTH.height = 0;
+  CLOTH = buildCloth(w, h);
+  if (WORLD.screenTex) WORLD.screenTex.dispose();
+  const screenTex = new THREE.CanvasTexture(DISP.cv);
+  screenTex.colorSpace = THREE.SRGBColorSpace; screenTex.generateMipmaps = false; screenTex.minFilter = THREE.LinearFilter;
+  WORLD.screenTex = WORLD.screenMat.map = screenTex; WORLD.screenMat.needsUpdate = true;
+  WORLD.sun.castShadow = q !== 'low';
+  if (!WORLD.sun.castShadow && WORLD.sun.shadow && WORLD.sun.shadow.map) { WORLD.sun.shadow.map.dispose(); WORLD.sun.shadow.map = null; }
+  WORLD.dust.visible = true;
+  G.dispDirty = true; lastDisp = 0; drawDisplay();
   applyTexts();
 }
 $('b-play').addEventListener('click', () => { audioInit(); sfx.click(); openMap(); });
@@ -3526,7 +3556,7 @@ window.karagozSim = (seconds) => {
   for (let i = 0; i < n; i++) { update(1 / 30); if (BOT.done) break; }
   G.simming = false; exportState(); return window.karagoz;
 };
-window.karagozDebug = { G, SCENES, matchOf, TYPES, botThink: () => botThink(), viewOf, renderShadows, mkTarget, stateFrom, scaleOf, LAMP_DIST, DEPTH, LCOL, LY, SCR_W, LAMP_R, beatScore, beatHeight, flameGust, present, afterChange, updateGizmo, AU, updateProximityAudio, silenceProximityAudio };
+window.karagozDebug = { G, SCENES, matchOf, TYPES, botThink: () => botThink(), viewOf, renderShadows, mkTarget, stateFrom, scaleOf, LAMP_DIST, DEPTH, LCOL, LY, SCR_W, LAMP_R, beatScore, beatHeight, flameGust, present, afterChange, updateGizmo, AU, updateProximityAudio, silenceProximityAudio, DISP, get CLOTH() { return CLOTH; }, WORLD, setQuality };
 function debugText() {
   const e = window.__errs;
   $('dbg').innerHTML = `fps ${DBG.fps}  calls ${DBG.calls}  tris ${DBG.tris}\n${DBG.gpu}\nscreen ${G.screen}  scene ${G.sc ? G.idx + 1 : '-'}  match ${(G.match * 100).toFixed(1)}%  moves ${G.moves}\nbot steps ${BOT.steps} hints ${BOT.hints} ${BOT.done ? 'DONE' : ''}  filter ${FILTER_OK}` +
