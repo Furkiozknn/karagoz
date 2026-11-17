@@ -788,7 +788,7 @@ input[type=range]{flex:1;accent-color:var(--amber);height:44px;margin:0;cursor:p
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"},"integrity":{"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js":"sha384-GY5FqjttLCFRt/McQbyaVdCk2O1IQtOeX8Py6NfD89BIAsIyJFRl4UgSXrk2vXAk","https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/utils/BufferGeometryUtils.js":"sha384-wOjwauvHlJO7K6APr7FmMGH2nupQa3Ndzas9bJZhsAMOK055efJud8ns4aYmASKv"}}
 </script>
-<script type="module">/*ARENA-CORE:BEGIN v2.0.1 sha256:cfe1449bc854*/
+<script type="module">/*ARENA-CORE:BEGIN v2.1.1 sha256:476baa52ff6a*/
 /* ARENA-CORE v2 — shared visual / feel / test layer for the Claude Game Arena games (Furki Ozkan).
  *
  * Injected inline as <script type="module"> right after each game's importmap by tools/inject.mjs,
@@ -801,16 +801,31 @@ input[type=range]{flex:1;accent-color:var(--amber);height:44px;margin:0;cursor:p
  *       opts: { tonlama: 'neutral'|'aces'|'agx'|'none', pozlama, ortam (0..1 env light), bloom: {guc, esik, yaricap}|false,
  *               renk: {doygunluk, kontrast}, tonlama 'koru' keeps the game's own tone mapping,
  *               vinyet (0..1), grain (0..1), saydam (true when the canvas is transparent over a CSS background) }
+ *       composer mode puts a NaN/Inf guard right after the RenderPass (v2.1.1: exponent-bit test via floatBitsToUint,
+ *       because ANGLE/D3D11 folds `x != x` away), so one bad pixel from a game shader (e.g. pow(negative, y)) can not
+ *       turn the whole bloomed frame black. Still clamp such bases in the game: the guarded pixel itself becomes black.
  *   ArenaCore.kabuk.yukleme({ baslik, alt, renk }) -> { ilerle(0..1), bitir() }   loading overlay
  *   ArenaCore.kabuk.onceDerle(renderer, scene, camera) -> Promise   shader warm-up (renderer.compile, never throws)
  *   ArenaCore.his.{ tween, hitstop, zamanOlcegi, sarsinti, ucanYazi }   game feel (Sumiro-tuned defaults)
  *   ArenaCore.kamera.yay(cur, target, omega, dt, vel)                    critically damped spring (numbers or Vector3)
  *   ArenaCore.test.kur({ read, step })     exposes window.__game for bots / gates
  *   ArenaCore.test.capture                 ?capture&fps=30&seed=1 : virtual clock, window.__capture.advance(n)
+ *   ArenaCore.ses                          audio bus (v2.1). Zero cost until first call; AudioContext made on the first
+ *       pointerdown/keydown/touchstart (or ses.baglam() in a gesture handler), resume() never awaited; ?capture / ?sessiz: none.
+ *       ses.baglam() -> ctx|null   ses.ctx   ses.calisiyor   ses.bus.{muzik,sfx,ortam} (GainNodes)   ses.cikis (master)
+ *       ses.duzey('ana'|'muzik'|'sfx'|'ortam', v?)   ses.sustur(bus, m?)   persisted in arena.core.ses (not on quiet runs);
+ *           kit Arena.settings.muted / .sound === false / .volume are honoured when present
+ *       ses.yukle(ad, url|url[]|AudioBuffer[], { yedek: 'tok'|'ding'|'whoosh'|'darbe' })   fetch now, decode on unlock
+ *       ses.cal(ad, { varyant: 0.06, perde: 1, ses: 1, no, bus: 'sfx', zaman, duck })   random variant + pitch/volume spread;
+ *           falls back to the synth of that name (or `yedek`) when no file is decoded
+ *       ses.muzik(url|AudioBuffer|ad|null, { dongu: true, gecis: 1.2, ses: 1 })   crossfaded loop; ses.ortam(...) same on ambience
+ *       ses.duck(miktar=0.55, sure=0.22)   ses.ducking = { miktar, sure, esik: 3 one-shots in 0.2 s, 0 = off }
+ *       ses.synth.{ tok, ding, whoosh, darbe }({ zaman, perde, ses, bus })   procedural one-shots, no files
+ *       Reduced motion (OS or kit): whoosh/darbe 40% softer, ducking half as deep. Own PRNG: never touches Math.random.
  */
 import * as THREE from 'three';
 
-const VERSION = '2.0.1';
+const VERSION = '2.1.1';
 const Q = new URLSearchParams(location.search);
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
@@ -883,8 +898,9 @@ const NAN_SHADER = {
   uniforms: { tDiffuse: { value: null } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
   fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv;
-    void main(){ vec4 c = texture2D(tDiffuse, vUv); bvec4 bad = bvec4(c.r != c.r || c.r > 65000.0, c.g != c.g || c.g > 65000.0, c.b != c.b || c.b > 65000.0, c.a != c.a);
-      if (any(bad)) c = vec4(0.0, 0.0, 0.0, 1.0); gl_FragColor = c; }`,
+    void main(){ vec4 c = texture2D(tDiffuse, vUv);
+      bool bad = any(equal(floatBitsToUint(c) & uvec4(0x7f800000u), uvec4(0x7f800000u))) || any(greaterThan(c.rgb, vec3(65000.0)));
+      gl_FragColor = bad ? vec4(0.0, 0.0, 0.0, 1.0) : c; }`,
 };
 
 const VINYET_SHADER = {
@@ -1002,7 +1018,7 @@ const EASE = {
 const his = (() => {
   const tweens = new Set();
   let stopT = 0, olcek = 1, travma = 0;
-  const reduce = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches || (window.Arena && Arena.settings && Arena.settings.motion === false); } catch (e) { return false; } };
+  const reduce = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches || (window.Arena && Arena.settings && Arena.settings.reducedMotion === true); } catch (e) { return false; } };
   const api = {
     EASE,
     tween(obj, hedef, sure = 0.3, ease = 'outCubic') {
@@ -1060,7 +1076,225 @@ const kamera = {
   },
 };
 
-window.ArenaCore = { version: VERSION, kalite, render, kabuk, his, kamera, test };
+/* ---------- ses: audio bus (lazy, gesture-gated, never awaited) ---------- */
+// Nothing happens until the game calls something here: no AudioContext, no listeners, no fetches.
+// The context is created on the first pointerdown/keydown/touchstart after first use (or by ses.baglam() inside a
+// gesture handler) and resume() is never awaited, so ?auto / ?nosave boots cannot stall on autoplay policy.
+// ?capture and ?sessiz never create a context (determinism: a running context follows the wall clock).
+const ses = (() => {
+  const KAPALI = Q.has('capture') || Q.has('sessiz');
+  const BUSLAR = ['muzik', 'sfx', 'ortam'];
+  const ayar = Object.assign({ ana: 1, muzik: 0.8, sfx: 1, ortam: 0.7, kapali: {} }, store.get('arena.core.ses', {}));
+  ayar.kapali = Object.assign({ ana: false, muzik: false, sfx: false, ortam: false }, ayar.kapali);
+  let ctx = null, ana = null, duk = null, gurultu = null, etkin = false, acildi = false, rs = 0x5e5 >>> 0;
+  const bus = {}, kayit = new Map(), son = [], istek = { muzik: null, ortam: null }, calan = { muzik: null, ortam: null };
+  const rnd = () => { rs = (rs + 0x6D2B79F5) >>> 0; let x = rs; x = Math.imul(x ^ (x >>> 15), x | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; // own PRNG: never consumes the game's Math.random
+  const kitAyar = () => { try { return (window.Arena && Arena.settings) || {}; } catch (e) { return {}; } };
+  const azalt = () => { try { const s = kitAyar(); return s.reducedMotion === true || matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+  const hedef = (k) => {
+    const s = kitAyar();
+    const kitKapali = s.muted === true || s.sound === false; // future kit fields; honoured when present
+    const kitSes = typeof s.volume === 'number' ? Math.max(0, Math.min(1, s.volume)) : 1;
+    if (k === 'ana') return (ayar.kapali.ana || kitKapali) ? 0 : ayar.ana * kitSes;
+    return ayar.kapali[k] ? 0 : ayar[k];
+  };
+  const uygula = () => {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    ana.gain.setTargetAtTime(hedef('ana'), t, 0.02);
+    for (const k of BUSLAR) bus[k].gain.setTargetAtTime(hedef(k), t, 0.02);
+  };
+  const kaydet = () => store.set('arena.core.ses', ayar);
+  const kilitBirak = () => { for (const n of ['pointerdown', 'keydown', 'touchstart']) window.removeEventListener(n, kilit, true); };
+  // gestures unlock the context until it has run once; after that the game owns suspend/resume (e.g. its pause menu)
+  function kilit() { if (!acildi) baglam(); else kilitBirak(); }
+  function kullan() {
+    if (etkin || KAPALI) return;
+    etkin = true;
+    for (const n of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(n, kilit, { capture: true, passive: true });
+    try { if (window.Arena && Arena.on) Arena.on('settings', uygula); } catch (e) { }
+  }
+  /** create the context + buses if allowed (call it inside a gesture handler); resume is fired, never awaited */
+  function baglam() {
+    kullan();
+    if (KAPALI) return null;
+    if (!ctx) {
+      try {
+        const C = window.AudioContext || window.webkitAudioContext;
+        if (!C) return null;
+        ctx = new C({ latencyHint: 'interactive' });
+      } catch (e) { ctx = null; return null; }
+      ana = ctx.createGain(); ana.connect(ctx.destination);
+      duk = ctx.createGain(); duk.connect(ana);
+      for (const k of BUSLAR) { bus[k] = ctx.createGain(); bus[k].connect(k === 'muzik' ? duk : ana); }
+      const izle = () => { if (ctx.state === 'running' && !acildi) { acildi = true; kilitBirak(); } };
+      try { ctx.addEventListener('statechange', izle); } catch (e) { }
+      izle();
+      uygula();
+      for (const [ad, k] of kayit) coz(ad, k);
+    }
+    if (ctx.state === 'suspended') { try { ctx.resume().catch(() => { }); } catch (e) { } }
+    return ctx;
+  }
+  const calisiyor = () => !!ctx && ctx.state === 'running';
+  const zamanOf = (z) => (z == null ? ctx.currentTime + 0.001 : z);
+
+  // ---- samples: yukle(ad, url | url[] | AudioBuffer[]) fetches now, decodes once a context exists
+  function coz(ad, k) {
+    if (!ctx) return;
+    k.baytlar.forEach((p, i) => {
+      if (k.tamponlar[i] || k.cozuluyor[i]) return;
+      k.cozuluyor[i] = true;
+      p.then(b => b && ctx.decodeAudioData(b.slice(0))).then(buf => { if (buf) k.tamponlar[i] = buf; }).catch(() => { });
+    });
+  }
+  function yukle(ad, kaynak, { yedek = null } = {}) {
+    kullan();
+    const list = Array.isArray(kaynak) ? kaynak : [kaynak];
+    const k = { tamponlar: [], cozuluyor: [], baytlar: [], yedek };
+    list.forEach((s, i) => {
+      if (typeof AudioBuffer !== 'undefined' && s instanceof AudioBuffer) { k.tamponlar[i] = s; k.baytlar[i] = Promise.resolve(null); }
+      else if (s instanceof ArrayBuffer) k.baytlar[i] = Promise.resolve(s);
+      else k.baytlar[i] = fetch(s).then(r => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
+    });
+    kayit.set(ad, k);
+    if (ctx) coz(ad, k);
+    return Promise.all(k.baytlar).then(() => true);
+  }
+
+  // ---- ducking: the music bus dips under sfx bursts (esik one-shots within 0.2 s) or on demand
+  const ducking = { miktar: 0.55, sure: 0.22, esik: 3 };
+  function duck(miktar = ducking.miktar, sure = ducking.sure) {
+    if (!ctx) return;
+    const t = ctx.currentTime, m = azalt() ? 1 - (1 - miktar) * 0.5 : miktar;
+    duk.gain.cancelScheduledValues(t);
+    duk.gain.setTargetAtTime(m, t, 0.015);
+    duk.gain.setTargetAtTime(1, t + sure, 0.12);
+  }
+  function patlama() {
+    if (!ducking.esik) return;
+    const t = ctx.currentTime;
+    son.push(t); while (son.length && son[0] < t - 0.2) son.shift();
+    if (son.length >= ducking.esik) { son.length = 0; duck(); }
+  }
+
+  // ---- procedural fallbacks (no files needed): tok, ding, whoosh, darbe. opts: { zaman, perde, ses, bus }
+  const cikisOf = (o) => bus[o.bus || 'sfx'] || bus.sfx;
+  function gurultuTamponu() {
+    if (gurultu) return gurultu;
+    const n = Math.floor(ctx.sampleRate * 0.6);
+    gurultu = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = gurultu.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = rnd() * 2 - 1;
+    return gurultu;
+  }
+  function osc(dest, w, type, f0, f1, sure, vol) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f0, w);
+    if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, w + sure);
+    g.gain.setValueAtTime(0.0001, w); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), w + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, w + sure);
+    o.connect(g); g.connect(dest); o.start(w); o.stop(w + sure + 0.03);
+  }
+  function gurultuVur(dest, w, sure, vol, tip, f, q = 0.8, f1 = 0) {
+    const s = ctx.createBufferSource(); s.buffer = gurultuTamponu();
+    const flt = ctx.createBiquadFilter(); flt.type = tip; flt.frequency.setValueAtTime(f, w); flt.Q.value = q;
+    if (f1) flt.frequency.exponentialRampToValueAtTime(f1, w + sure);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, w); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), w + Math.min(0.01, sure * 0.3));
+    g.gain.exponentialRampToValueAtTime(0.0001, w + sure);
+    s.connect(flt); flt.connect(g); g.connect(dest);
+    s.start(w, rnd() * 0.3); s.stop(w + sure + 0.02);
+  }
+  const synth = {
+    /** wooden tick / UI tap */
+    tok(o = {}) { if (!calisiyor()) return false; const w = zamanOf(o.zaman), p = o.perde || 1, v = o.ses ?? 1, d = cikisOf(o);
+      osc(d, w, 'triangle', 1100 * p, 520 * p, 0.06, 0.35 * v); gurultuVur(d, w, 0.035, 0.18 * v, 'bandpass', 2400 * p, 1.5); return true; },
+    /** bell-like confirm (two inharmonic partials); o.frekans overrides the 880 Hz base */
+    ding(o = {}) { if (!calisiyor()) return false; const w = zamanOf(o.zaman), f = (o.frekans || 880) * (o.perde || 1), v = o.ses ?? 1, d = cikisOf(o), s = o.sure || 0.35;
+      osc(d, w, 'sine', f, f, s, 0.22 * v); osc(d, w, 'sine', f * 2.76, f * 2.74, s * 0.45, 0.06 * v); osc(d, w, 'triangle', f * 2, f * 2, 0.03, 0.05 * v); return true; },
+    /** air sweep; o.sure seconds, o.yukari false sweeps down */
+    whoosh(o = {}) { if (!calisiyor()) return false; const w = zamanOf(o.zaman), s = o.sure || 0.35, v = (o.ses ?? 1) * (azalt() ? 0.6 : 1), up = o.yukari !== false;
+      gurultuVur(cikisOf(o), w, s, 0.32 * v, 'bandpass', up ? 450 : 3200, 1.2, up ? 3200 : 450); return true; },
+    /** low impact: sub drop + noise burst + click */
+    darbe(o = {}) { if (!calisiyor()) return false; const w = zamanOf(o.zaman), p = o.perde || 1, v = (o.ses ?? 1) * (azalt() ? 0.6 : 1), d = cikisOf(o);
+      osc(d, w, 'sine', 140 * p, 42 * p, 0.38, 0.85 * v); gurultuVur(d, w, 0.09, 0.3 * v, 'lowpass', 900 * p); osc(d, w, 'square', 1800 * p, 900 * p, 0.012, 0.05 * v); return true; },
+  };
+
+  /** play a one-shot: a loaded sample (random variant, pitch/volume spread) or a synth helper of that name.
+   *  opts: { varyant: spread 0..1 (default 0.06), perde: rate, ses: gain, no: variant index, bus, zaman, duck } */
+  function cal(ad, o = {}) {
+    kullan();
+    if (!calisiyor()) return false;
+    const k = kayit.get(ad);
+    const hazir = k ? k.tamponlar.filter(Boolean) : [];
+    const yay = o.varyant ?? 0.06;
+    const perde = (o.perde || 1) * (1 + (rnd() * 2 - 1) * yay);
+    const vol = (o.ses ?? 1) * (1 - rnd() * yay * 2);
+    let ok = false;
+    if (hazir.length) {
+      const buf = hazir[o.no != null ? o.no % hazir.length : Math.floor(rnd() * hazir.length)];
+      const s = ctx.createBufferSource(), g = ctx.createGain();
+      s.buffer = buf; s.playbackRate.value = perde; g.gain.value = vol;
+      s.connect(g); g.connect(cikisOf(o)); s.start(zamanOf(o.zaman)); ok = true;
+    } else {
+      const f = synth[(k && k.yedek) || ad];
+      ok = f ? f(Object.assign({}, o, { perde, ses: vol })) : false;
+    }
+    if (ok && (o.bus || 'sfx') === 'sfx') { if (o.duck) duck(typeof o.duck === 'number' ? o.duck : undefined); else patlama(); }
+    return ok;
+  }
+
+  /** looping bed on the music / ambience bus with crossfade. src: url | AudioBuffer | yukle() name | null (fade out) */
+  async function dongula(busAd, src, { dongu: tekrar = true, gecis = 1.2, ses: v = 1 } = {}) {
+    kullan();
+    if (KAPALI) return false;
+    const benim = istek[busAd] = { src };
+    let buf = null;
+    if (src) {
+      if (typeof AudioBuffer !== 'undefined' && src instanceof AudioBuffer) buf = src;
+      else {
+        if (!kayit.has(src)) await yukle(src, src);
+        const k = kayit.get(src);
+        await Promise.all(k.baytlar);
+        while (!ctx && istek[busAd] === benim) await new Promise(r => setTimeout(r, 250)); // wait for the first gesture
+        if (istek[busAd] !== benim) return false;
+        coz(src, k);
+        for (let i = 0; i < 40 && !k.tamponlar.some(Boolean); i++) await new Promise(r => setTimeout(r, 50));
+        buf = k.tamponlar.find(Boolean) || null;
+      }
+    }
+    if (!ctx || istek[busAd] !== benim) return false;
+    const t = ctx.currentTime, eski = calan[busAd];
+    if (eski) { eski.g.gain.cancelScheduledValues(t); eski.g.gain.setValueAtTime(eski.g.gain.value, t); eski.g.gain.linearRampToValueAtTime(0, t + gecis); try { eski.s.stop(t + gecis + 0.05); } catch (e) { } }
+    calan[busAd] = null;
+    if (!buf) return !src;
+    const s = ctx.createBufferSource(), g = ctx.createGain();
+    s.buffer = buf; s.loop = tekrar;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + Math.max(0.01, gecis));
+    s.connect(g); g.connect(bus[busAd]); s.start(t);
+    calan[busAd] = { s, g };
+    return true;
+  }
+
+  return {
+    get ctx() { return ctx; },
+    get calisiyor() { return calisiyor(); },
+    get kapali() { return KAPALI; },
+    bus, // { muzik, sfx, ortam } GainNodes once the context exists (connect your own nodes here)
+    get cikis() { return ana; },
+    baglam,
+    /** volume of 'ana' | 'muzik' | 'sfx' | 'ortam' (0..1); with v it sets and persists */
+    duzey(k, v) { kullan(); if (v == null) return ayar[k]; ayar[k] = Math.max(0, Math.min(1, +v || 0)); kaydet(); uygula(); return ayar[k]; },
+    /** mute flag; with m it sets and persists */
+    sustur(k, m) { kullan(); if (m == null) return !!ayar.kapali[k]; ayar.kapali[k] = !!m; kaydet(); uygula(); return ayar.kapali[k]; },
+    yukle, cal, duck, ducking, synth,
+    muzik: (src, o) => dongula('muzik', src, o),
+    ortam: (src, o) => dongula('ortam', src, o),
+  };
+})();
+
+window.ArenaCore = { version: VERSION, kalite, render, kabuk, his, kamera, test, ses };
 /*ARENA-CORE:END*/</script>
 
 <script data-goatcounter="https://furkiozknn.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
