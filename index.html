@@ -3122,6 +3122,17 @@ function addDlgLine(i) {
   if (i === G.sc.dlg.length - 1) { AUDN.laugh = 1; setTimeout(() => sfx.laugh(5, 1), 350); }
   else if (Math.random() < 0.5) { AUDN.laugh = Math.max(AUDN.laugh, 0.45); setTimeout(() => sfx.laugh(2, 0.6), 400); }
 }
+// Portal ad hooks (G-050). Ads only at the natural break: when the player leaves the scene-solved sheet (next scene,
+// replay, act map; button or Enter / Space / N). On the game's own site (no portal SDK) afterBreak() runs the action
+// synchronously, so the site plays exactly as before. The ?auto bot calls nextScene() directly and is not affected.
+// No rewarded hook: the hint is already free and unlimited (it costs a star); an ad hint without that cost would make the
+// stars differ between the site and a portal.
+let breakBusy = false;
+function afterBreak(f) {
+  if (!(window.Arena && Arena.portal && Arena.portal.name !== 'none')) return f(); // own site: synchronous, as before
+  if (breakBusy) return; breakBusy = true;
+  Arena.portal.midgame().catch(() => false).then(() => { breakBusy = false; f(); });
+}
 function nextScene() {
   $('ov-result').hidden = true;
   if (G.idx < SCENES.length - 1) startScene(G.idx + 1); else showEnd();
@@ -3571,7 +3582,7 @@ addEventListener('keydown', e => {
   if (k === 'x' || k === 'X') { SET.sfxOn = !SET.sfxOn; saveSettings(); auVolumes(); toast(t(SET.sfxOn ? 'sfxOn' : 'sfxOff'), 'info'); return; }
   if (k === 'l' || k === 'L') { setLang(SET.lang === 'tr' ? 'en' : 'tr'); return; }
   if (G.screen === 'intro' && (k === ' ' || k === 'Enter')) { G.introT = Math.max(G.introT, 2.6); return; }
-  if (G.screen === 'result' && (k === 'Enter' || k === ' ' || k === 'n' || k === 'N') && tag !== 'BUTTON') { e.preventDefault(); if (G.dlgShown < G.sc.dlg.length) G.resultT = G.dlgShown * 2.1 + 0.01; else nextScene(); return; }
+  if (G.screen === 'result' && (k === 'Enter' || k === ' ' || k === 'n' || k === 'N') && tag !== 'BUTTON') { e.preventDefault(); if (G.dlgShown < G.sc.dlg.length) G.resultT = G.dlgShown * 2.1 + 0.01; else afterBreak(nextScene); return; }
   if (G.screen !== 'play' || overlayOpen() || G.paused) return;
   if (k === 'Tab' && !e.shiftKey && (tag === 'CANVAS' || tag === 'BODY' || !tag)) { e.preventDefault(); toggleView(); return; }
   if (k === 'v' || k === 'V') { toggleView(); return; }
@@ -4098,9 +4109,9 @@ $('b-menu').addEventListener('click', toTitle);
 $('b-mapback').addEventListener('click', toTitle);
 $('b-emenu').addEventListener('click', toTitle);
 $('b-again').addEventListener('click', () => { openMap(); });
-$('b-next').addEventListener('click', () => { sfx.click(); nextScene(); });
-$('b-replay').addEventListener('click', () => { sfx.click(); $('ov-result').hidden = true; startScene(G.idx); });
-$('b-rmap').addEventListener('click', () => { sfx.click(); openMap(); });
+$('b-next').addEventListener('click', () => { sfx.click(); afterBreak(nextScene); });
+$('b-replay').addEventListener('click', () => { sfx.click(); afterBreak(() => { $('ov-result').hidden = true; startScene(G.idx); }); });
+$('b-rmap').addEventListener('click', () => { sfx.click(); afterBreak(openMap); });
 $('b-view').addEventListener('click', () => { audioInit(); toggleView(); });
 $('b-hint').addEventListener('click', () => { audioInit(); useHint(); });
 $('b-pause').addEventListener('click', () => { audioInit(); togglePause(); });
