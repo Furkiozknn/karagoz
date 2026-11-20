@@ -5,15 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Karagöz</title>
 <meta name="arena-game" content="karagoz">
-<meta name="description" content="A 3D shadow-theatre light puzzle about Karagöz and Hacivat, redesigned with a lamp-lit linen screen and a coffee-house stage: move puppets and lamps until the shadows match. Plays in the browser.">
+<meta name="description" content="Karagöz ile Hacivat'ın gölge oyununda kuklaları ve kandilleri oynat, gölgeleri perdedeki hedefe oturt. 24 sahne, 72 yıldız; tarayıcıda, kurulumsuz, telefonda da oynanır. A 3D shadow-theatre light puzzle.">
+<meta name="theme-color" content="#120906">
+<meta name="color-scheme" content="dark">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M4 52V14Q4 6 12 6H52Q60 6 60 14V52Z' fill='%235D1A1A'/%3E%3Cpath d='M7 49V15Q7 9 13 9H51Q57 9 57 15V49Z' fill='%23F3E5C0'/%3E%3Ccircle cx='32' cy='27' r='16' fill='%23FFE599'/%3E%3Cpath d='M18 47C18 39 21 34 25 33L24 28C21 27 20 22 23 19C26 16 33 16 35 20L40 19L37 23C39 26 38 30 35 31L37 34C42 35 45 40 45 47Z' fill='%23B22222'/%3E%3Ccircle cx='33.5' cy='32' r='4' fill='%23180D08'/%3E%3Cpath d='M2 54H62' stroke='%23FFB000' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Karagöz · Shadow Theatre">
-<meta property="og:description" content="A 3D shadow-theatre light puzzle about Karagöz and Hacivat, redesigned with a lamp-lit linen screen and a coffee-house stage: move puppets and lamps until the shadows match. Plays in the browser.">
+<meta property="og:title" content="Karagöz · Gölge Oyunu Işık Bulmacası">
+<meta property="og:locale" content="tr_TR">
+<meta property="og:site_name" content="Claude Game Arena">
+<meta property="og:description" content="Karagöz ile Hacivat'ın gölge oyununda kuklaları ve kandilleri oynat, gölgeleri perdedeki hedefe oturt. 24 sahne, 72 yıldız; tarayıcıda, kurulumsuz, telefonda da oynanır. A 3D shadow-theatre light puzzle.">
 <meta property="og:url" content="https://furkiozknn.github.io/karagoz/">
 <meta property="og:image" content="https://furkiozknn.github.io/karagoz/docs/card.jpg">
 <meta property="og:image:width" content="960">
 <meta property="og:image:height" content="540">
+<meta property="og:image:alt" content="Karagöz ve Hacivat, beyaz perdenin arkasında ışık bulmacası">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Karagöz · Gölge Oyunu Işık Bulmacası">
+<meta name="twitter:description" content="Karagöz ile Hacivat'ın gölge oyununda kuklaları ve kandilleri oynat, gölgeleri perdedeki hedefe oturt. 24 sahne, 72 yıldız; tarayıcıda, kurulumsuz, telefonda da oynanır. A 3D shadow-theatre light puzzle.">
+<meta name="twitter:image" content="https://furkiozknn.github.io/karagoz/docs/card.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
@@ -253,6 +262,14 @@ input[type=range]{flex:1;accent-color:var(--amber);height:44px;margin:0;cursor:p
 .footer{margin-top:16px;font-size:13px;color:var(--ink3);text-align:center}
 .footer a{color:var(--gold);text-decoration:none;font-weight:600}
 .footer a:hover{text-decoration:underline}
+.footer>a{display:inline-block;padding:10px 4px}
+.footer .vrow{margin-top:0;display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px 14px}
+.footer .vrow a,.footer .vrow button{display:inline-flex;align-items:center;min-height:36px;padding:0 6px;font-size:13px;font-weight:600;color:var(--gold);text-decoration:none}
+.footer .vrow button{color:var(--ink2);font-weight:500;text-decoration:underline dotted}
+.news ul{margin:0;padding:0 0 0 20px;color:var(--ink);font-size:14px;line-height:1.5}
+.news li{margin:0 0 8px}
+.news .vline{color:var(--ink3);font-size:12px;text-align:center}
+@media (max-width:480px){#b-daily{flex-wrap:wrap;row-gap:0;line-height:1.25;padding-top:6px;padding-bottom:6px}}
 
 /* Title / Main Menu Screen */
 .title{text-align:center;width:min(94vw,520px)}
@@ -1683,7 +1700,8 @@ window.ArenaCore = { version: VERSION, kalite, render, kabuk, his, kamera, test,
         </div>
       </div>
       <div class="best" id="best-line"></div>
-      <div class="footer"><a href="https://github.com/Furkiozknn" target="_blank" rel="noopener">Claude Game Arena</a> · built by Claude Opus 5.5</div>
+      <div class="footer"><a href="https://github.com/Furkiozknn" target="_blank" rel="noopener">Claude Game Arena</a> · built by Claude Opus 5.5
+        <div class="vrow"><a id="a-hub" href="https://furkiozknn.github.io/" data-t="hub"></a><button type="button" id="ver-tag" data-t="verTag"></button></div></div>
     </div>
   </div>
 
@@ -1738,6 +1756,16 @@ window.ArenaCore = { version: VERSION, kalite, render, kabuk, his, kamera, test,
         <button class="btn" id="b-replay"><svg><use href="#i-restart"/></svg><span data-t="replay"></span></button>
         <button class="btn primary" id="b-next"><svg><use href="#i-play"/></svg><span id="b-next-t"></span></button>
       </div>
+    </div>
+  </div>
+
+  <!-- What's new -->
+  <div class="overlay" id="ov-news" hidden role="dialog" aria-modal="true" aria-labelledby="news-h">
+    <div class="panel glass col curtain news">
+      <h2 id="news-h" data-t="newsTitle"></h2>
+      <ul id="news-list"></ul>
+      <div class="vline" data-t="verTag"></div>
+      <button class="btn primary w" id="b-nclose"><svg><use href="#i-back"/></svg><span data-t="back"></span></button>
     </div>
   </div>
 
@@ -1804,6 +1832,10 @@ if (FLAG.lang === 'tr' || FLAG.lang === 'en') SET.lang = FLAG.lang;
 if (FLAG.low) SET.quality = 'low';
 const PROG = load('save', { stars: [], cur: null, hints: 0 });
 const BEST = load('best', { stars: 0, done: false, moves: 0 });
+// per-scene personal best (fewest moves); a separate key, so an old save without it opens as before
+const REC = load('rec', { m: {} });
+if (!REC.m || typeof REC.m !== 'object' || Array.isArray(REC.m)) REC.m = {};
+for (const k of Object.keys(REC.m)) { const v = Math.round(Number(REC.m[k])); if (!Number.isFinite(v) || v < 1) delete REC.m[k]; else REC.m[k] = v; }
 // saved progress may be corrupted or edited by hand: stars must be an array of 0..3 numbers so the totals cannot crash startup
 PROG.stars = Array.isArray(PROG.stars) ? PROG.stars.map(v => { v = Math.round(Number(v)); return Number.isFinite(v) ? Math.max(0, Math.min(3, v)) : 0; }) : [];
 if (!Number.isFinite(PROG.hints)) PROG.hints = 0;
@@ -1840,6 +1872,12 @@ const I18N = {
     daily: 'Günün Meydan Okuması', dailyInfo: 'seri {s} · en iyi {b}', dailyDone: 'bugün tamam', dailyScene: 'Günün sahnesi: {n}',
     dailyStreak: 'Günün Meydan Okuması · seri {s} gün (en iyi {b})', dailyNote: 'Günlük sahnenin yıldızları perde haritasına yazılmaz.',
     share: 'Paylaş', another: 'Başka oyun', a11y: 'Erişilebilirlik',
+    hub: 'Diğer oyunlar', verTag: 'v2.2 · Kasım 2026', newsTitle: 'Yenilikler',
+    news1: 'Sahne rekorları: her sahnede en az hamle sayın saklanır; sonuç ekranında ve Perde Haritası’nda görünür.',
+    news2: 'Telefonda sahne çözülünce kısa bir titreşim (Erişilebilirlik ayarından kapatılabilir).',
+    news3: 'Sekme simgesi, tarayıcı çubuğu rengi ve Türkçe paylaşım kartı eklendi; kayıp sayfa için 404 sayfası geldi.',
+    news4: 'Ana ekrana “Diğer oyunlar” bağlantısı, sürüm etiketi ve bu Yenilikler penceresi eklendi.',
+    recFirst: ' · rekor {r} hamle', recNew: ' · yeni rekor! {r} hamle (önceki {o})', recSame: ' · rekor {r} hamle', recTip: 'rekor {r} hamle',
     shareScene: '{n} · {st}/3 yıldız · {m} hamle', shareDaily: 'Günün Meydan Okuması {d} · seri {s}', shareEnd: '{s}/72 yıldız · {n}/24 sahne',
     badgeFirst: 'İlk gölge', badge3: 'Üç yıldızlı sahne', badgeAll: 'Perde kapandı',
     candleIn: 'Mumu kuklalara yaklaştır: büyük, yumuşak gölge (↑)', candleOut: 'Mumu geri çek: küçük, keskin gölge (↓)', show: 'Göster (G): alev durulunca',
@@ -1870,6 +1908,12 @@ const I18N = {
     daily: 'Daily challenge', dailyInfo: 'streak {s} · best {b}', dailyDone: 'done today', dailyScene: 'Today\'s scene: {n}',
     dailyStreak: 'Daily challenge · streak {s} (best {b})', dailyNote: 'Stars from the daily scene do not go on the act map.',
     share: 'Share', another: 'Another game', a11y: 'Accessibility',
+    hub: 'More games', verTag: 'v2.2 · November 2026', newsTitle: "What's new",
+    news1: 'Scene records: your fewest moves per scene are saved and shown on the result sheet and the act map.',
+    news2: 'A short vibration on phones when a scene is solved (switch it off under Accessibility).',
+    news3: 'Added a tab icon, browser bar colour and a Turkish share card, plus a 404 page.',
+    news4: 'Added a "More games" link on the title screen, a version tag and this What\'s new window.',
+    recFirst: ' · record {r} moves', recNew: ' · new record! {r} moves (was {o})', recSame: ' · record {r} moves', recTip: 'record {r} moves',
     shareScene: '{n} · {st}/3 stars · {m} moves', shareDaily: 'Daily challenge {d} · streak {s}', shareEnd: '{s}/72 stars · {n}/24 scenes',
     badgeFirst: 'First shadow', badge3: 'Three-star scene', badgeAll: 'The curtain falls',
     candleIn: 'Bring the candle closer to the puppets: bigger, softer shadow (↑)', candleOut: 'Pull the candle back: smaller, sharper shadow (↓)', show: 'Show (G), when the flame is steady',
@@ -3080,12 +3124,15 @@ function solve() {
     G.dailyRec = G.daily.complete(st * 100 - G.moves);
   } else {
     PROG.stars[G.idx] = Math.max(PROG.stars[G.idx] || 0, st);
+    const prevRec = REC.m[G.idx]; G.recPrev = prevRec;
+    if (G.moves >= 1 && (!prevRec || G.moves < prevRec)) { REC.m[G.idx] = G.moves; store('rec', REC); }
     if (G.hint) PROG.hints = (PROG.hints || 0) + 1;
     G.totalMoves = (G.totalMoves || 0) + G.moves;
     PROG.cur = G.idx < SCENES.length - 1 ? { i: G.idx + 1, s: null } : null;
     const total = PROG.stars.reduce((a, b) => a + (b || 0), 0);
     BEST.stars = Math.max(BEST.stars, total); store('best', BEST); saveProg();
   }
+  try { if (!G.simming && !FLAG.auto && navigator.vibrate && (!ARENA || ARENA.settings.vibration !== false)) navigator.vibrate([25, 40, 60]); } catch (e) { /* titresim yok */ }
   arenaAward('karagoz-first', 'badgeFirst'); if (st === 3) arenaAward('karagoz-3star', 'badge3');
   sfx.solve(); setTimeout(() => sfx.applause(2.4, 1), 250); AUDN.clap = 1; AUDN.laugh = 0.4;
   if (!G.simming) setTimeout(spawnSparks, 380);
@@ -3097,7 +3144,9 @@ function showResult() {
   const st = starsNow();
   $('r-title').textContent = t('solved') + ' · ' + L2(G.sc.title);
   $('r-stars').innerHTML = [0, 1, 2].map(i => `<svg class="${i < st ? 'on' : ''}"><use href="#i-star"/></svg>`).join('');
-  $('r-sub').textContent = t('solvedSub', { m: G.moves, p: G.sc.par, h: G.hint ? t('hintUsedSub') : '' });
+  let recTxt = '';
+  if (!G.daily && REC.m[G.idx]) { const r = REC.m[G.idx], o = G.recPrev; recTxt = o && r < o ? t('recNew', { r, o }) : t(o ? 'recSame' : 'recFirst', { r }); }
+  $('r-sub').textContent = t('solvedSub', { m: G.moves, p: G.sc.par, h: G.hint ? t('hintUsedSub') : '' }) + recTxt;
   $('r-dlg').innerHTML = '';
   $('b-next-t').textContent = G.idx < SCENES.length - 1 ? t('nextScene') : t('finale');
   $('b-next').hidden = !!G.daily; $('r-daily').hidden = !G.daily; $('b-rshare').hidden = !ARENA;
@@ -3569,10 +3618,11 @@ canvas.addEventListener('wheel', e => {
   const s = G.sel; if (s && s.k === 'p' && G.sc.pcs[s.i].dofs.r) act(a); else if (s && s.k === 'l') act(a === 'rotl' ? 'far' : 'near');
 }, { passive: false });
 
-function overlayOpen() { return ['ov-title', 'ov-map', 'ov-pause', 'ov-settings', 'ov-end'].some(id => !$(id).hidden); }
+function overlayOpen() { return ['ov-title', 'ov-map', 'ov-pause', 'ov-settings', 'ov-end', 'ov-news'].some(id => !$(id).hidden); }
 addEventListener('keydown', e => {
   audioInit();
   const k = e.key, tag = e.target && e.target.tagName;
+  if (!$('ov-news').hidden) { if (k === 'Escape') { closeNews(); e.preventDefault(); } return; }   // Yenilikler penceresi acikken oyun tuslari calismaz
   if (k === 'Escape' || k === 'p' || k === 'P') {
     if (!$('ov-settings').hidden) { closeSettings(); e.preventDefault(); return; }
     if (G.screen === 'play' || G.screen === 'result') { togglePause(); e.preventDefault(); }
@@ -3779,6 +3829,7 @@ function applyTexts() {
   document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
   document.querySelectorAll('[data-tt]').forEach(el => { el.title = t(el.dataset.tt); el.setAttribute('aria-label', t(el.dataset.tt)); });
   $('b-lang').textContent = SET.lang === 'tr' ? 'EN' : 'TR';
+  if (!$('ov-news').hidden) renderNews();
   for (const s of ['seg-lang', 'seg-lang2']) $(s).querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.l === SET.lang));
   $('seg-q').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.q === SET.quality));
   const ctlT = { 'c-near': 'near', 'c-far': 'far', 'c-rotl': 'rotl', 'c-rotr': 'rotr', 'c-dim': 'dim', 'c-remove': 'remove', 'c-undo': 'undo', 'c-reset': 'reset', 'c-show': 'show' };
@@ -4051,7 +4102,7 @@ function buildMap() {
       const b = document.createElement('button'); b.disabled = !open;
       if (st) b.classList.add('done'); if (i === firstOpen) b.classList.add('next');
       b.innerHTML = open ? `<span>${j + 1}</span><span class="stars">${starsHTML(st)}</span>` : `<svg width="18" height="18"><use href="#i-lock"/></svg>`;
-      b.title = open ? L2(SCENES[i].title) : t('locked'); b.setAttribute('aria-label', `${t('scene')} ${j + 1}: ${b.title}`);
+      b.title = open ? L2(SCENES[i].title) + (REC.m[i] ? ' · ' + t('recTip', { r: REC.m[i] }) : '') : t('locked'); b.setAttribute('aria-label', `${t('scene')} ${j + 1}: ${b.title}`);
       b.addEventListener('click', () => { audioInit(); sfx.click(); openScene(i); });
       g.appendChild(b);
     }
@@ -4076,6 +4127,11 @@ function openSettings() {
   G.settingsFrom = ['ov-title', 'ov-pause'].find(id => !$(id).hidden) || null;
   showOnly('ov-settings'); applyTexts(); $('b-sclose').focus();
 }
+function renderNews() { $('news-list').innerHTML = ''; for (let i = 1; i <= 4; i++) { const li = document.createElement('li'); li.textContent = t('news' + i); $('news-list').appendChild(li); } }
+function openNews() { renderNews(); $('ov-news').hidden = false; $('b-nclose').focus(); }
+function closeNews() { $('ov-news').hidden = true; $('ver-tag').focus(); }
+$('ver-tag').addEventListener('click', () => { audioInit(); sfx.click(); openNews(); });
+$('b-nclose').addEventListener('click', () => { sfx.click(); closeNews(); });
 function closeSettings() { showOnly(G.settingsFrom); if (G.settingsFrom === 'ov-pause') $('b-resume').focus(); }
 function setQuality(q) {
   SET.quality = q; saveSettings();

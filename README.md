@@ -25,6 +25,8 @@
   <strong>A 3D shadow-theatre light puzzle about Karagöz and Hacivat: in a dim Ottoman coffee house at night, slide and turn coloured leather puppets and move the oil lamps until their shadows on the cloth match the story picture.</strong>
 </p>
 
+<p align="center"><sub><b>v2.2 · Kasım 2026</b> · <a href="CHANGELOG.md">Değişiklik günlüğü</a> · <a href="https://furkiozknn.github.io/">Diğer oyunlar</a></sub></p>
+
 <!-- gameplay gif -->
 
 ## Features
@@ -34,6 +36,14 @@
 - **90% match & 72-star mastery:** Slide and rotate puppets and adjust oil lamp intensity until the live shadow match reaches 90% against the target outline; earn up to 3 stars per scene across 24 scenes (72 stars total) with par-move and no-hint bonuses.
 - **Automated bot verification:** An automated `?auto` bot plays through all 24 scenes from beginning to end using live pixel-matching logic, verifying that every reference puzzle can be solved with 0 JS errors.
 - **Ultra-lean web performance:** A single self-contained `index.html` running Three.js r170 delivering 60 fps at 28–32 draw calls on Intel UHD 620 (1280×720), with procedural leather textures, shaders, and Web Audio makam Hicaz synthesis generated entirely in code.
+
+## What's new in v2.2 (November 2026)
+
+- **Scene records:** your fewest moves per scene are saved locally (`arena.karagoz.rec`) and shown on the result sheet ("new record!") and in the act map tooltips. The daily challenge does not write records.
+- **Vibration** on phones when a scene is solved (follows the Accessibility vibration switch).
+- **What's new window and version tag** on the title screen, plus a **More games** link (it used to be only on the ending screen).
+- **Page fixes:** tab icon, `theme-color`, Turkish description and Open Graph / Twitter card, `404.html`, no more cramped daily-challenge button on narrow phones.
+- **Smoke test:** `node test/duman.mjs` (see below). Full list in [CHANGELOG.md](CHANGELOG.md).
 
 ## How to play
 
@@ -127,6 +137,14 @@
 - `?auto` bot plays all 24 scenes with 0 JS errors, with assets and with `?noassets`; `?lang=en` and `?lang=tr` show 0 errors.
 
 ![Before and after](docs/redesign-before-after.png)
+
+## Tests
+
+`test/duman.mjs` serves the folder, opens it in headless Chromium or Edge at 1366x768 and at 390x844 (touch), and checks: page loads without console errors or failed requests, Play reaches a scene, keyboard input changes the state, pause opens, no horizontal overflow or off-screen buttons, scene records, the What's new window, and opening with an old or corrupted save. It needs `playwright-core` (not committed):
+
+```bash
+PW_CORE=/path/to/node_modules/playwright-core node test/duman.mjs
+```
 
 ## Running locally
 
