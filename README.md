@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://furkiozknn.github.io/karagoz/">
-    <img src="docs/card.jpg" width="100%" alt="Karagöz: a shadow-theatre light puzzle with Karagöz and Hacivat behind the white cloth screen. Click to play in your browser.">
+    <img src="docs/card-3d.jpg" width="100%" alt="Karagöz: a shadow-theatre light puzzle with Karagöz and Hacivat behind the white cloth screen. Click to play in your browser.">
   </a>
 </p>
 
@@ -31,11 +31,20 @@
 
 ## Features
 
+<p align="center">
+  <img src="docs/features.jpg" width="100%" alt="Karagöz features: 24 scenes across 4 acts; real shadow optics where shadows grow soft near the lamp and sharp near the cloth; red and blue glass lamps that mix colours through translucent leather; 72 stars to earn by matching 90 percent, beating par and using no hint; a single index.html running Three.js at 60 fps.">
+</p>
+
+<details>
+<summary><b>Feature details</b></summary>
+
 - **24 scenes across 4 acts:** Journey through Mukaddime (the garden), Muhavere (the boat), Fasıl (the witches and the djinn), and Bitiş (the donkey)—each act introducing new puppets, lamp mechanics, and timed sequences in Act IV.
 - **Dynamic shadow optics & colour mixing:** Real point-light projection and flame penumbra make shadows grow soft and large near the lamp or small and sharp near the cloth; dual red and blue glass lamps mix colours dynamically through translucent leather.
 - **90% match & 72-star mastery:** Slide and rotate puppets and adjust oil lamp intensity until the live shadow match reaches 90% against the target outline; earn up to 3 stars per scene across 24 scenes (72 stars total) with par-move and no-hint bonuses.
 - **Automated bot verification:** An automated `?auto` bot plays through all 24 scenes from beginning to end using live pixel-matching logic, verifying that every reference puzzle can be solved with 0 JS errors.
 - **Ultra-lean web performance:** A single self-contained `index.html` running Three.js r170 delivering 60 fps at 28–32 draw calls on Intel UHD 620 (1280×720), with procedural leather textures, shaders, and Web Audio makam Hicaz synthesis generated entirely in code.
+
+</details>
 
 ## What's new in v2.2 (November 2026)
 
@@ -47,12 +56,21 @@
 
 ## How to play
 
+<p align="center">
+  <img src="docs/how-to-play.jpg" width="100%" alt="How to play Karagöz: pick a puppet from the tray and drag it along its rail; drag the oil lamps along their rails and click them to dim; switch to the audience view with V or Tab and rotate puppets with Q and E; match the gold dashed outline to 90 percent for up to three stars. Controls are listed in the text below.">
+</p>
+
+<details>
+<summary><b>Goal and steps</b></summary>
+
 > [!TIP]
 > **Goal:** The gold dashed outline on the screen is the target picture. Move the puppets and lamps until the live match % in the top bar reaches 90 %. Earn up to 3 stars per scene, 72 in all.
 
 1. **Pick and position puppets:** Select a puppet or lamp from the tray. Backstage, drag a puppet along its rail; pull it towards or away from the screen to alter its shadow depth and size.
 2. **Move and dim oil lamps:** Drag a brass kandil along its rail to reposition the light source; click it to dim or extinguish it to control shadow sharpness and colour overlap.
 3. **Switch perspectives or rotate:** Work backstage on puppet rails or switch to the audience view (`V` or `Tab`) to drag shadows directly. Use `Q` / `E` or the mouse wheel to rotate puppets into alignment.
+
+</details>
 
 <details>
 <summary><b>Rules and scoring</b></summary>
