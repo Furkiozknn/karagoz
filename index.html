@@ -367,7 +367,7 @@ input[type=range]{flex:1;accent-color:var(--amber);height:44px;margin:0;cursor:p
 .endfaces img{width:52px;height:52px;border-radius:50%;border:2px solid var(--gold);box-shadow:0 6px 16px rgba(0,0,0,.55),0 0 14px rgba(255,176,0,.35)}
 @media (max-height:900px){.endfaces img{width:40px;height:40px}}
 /* short screens: faces move to the card's top corners beside the title, the four totals share one row */
-@media (max-height:800px){
+@media (max-height:800px), (max-width:480px){
   #ov-end .panel{position:relative;width:min(94vw,560px)}
   .endfaces{position:absolute;top:40px;left:18px;right:18px;justify-content:space-between;margin:0;pointer-events:none}
   #ov-end .kv{grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0}
