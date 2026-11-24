@@ -1002,6 +1002,45 @@ input[type=range]{flex:1;accent-color:var(--amber);height:44px;margin:0;cursor:p
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 /*ARENA-KIT:END*/</script>
+<script>
+/* GL-GUARD: WebGL unavailable / three.js CDN unreachable -> clear TR+EN message instead of a stuck loading screen */
+(function () {
+  var T = {
+    gl: ['WebGL kullanılamıyor. Tarayıcında donanım hızlandırmayı aç ya da başka bir tarayıcı dene.', 'WebGL is unavailable. Enable hardware acceleration in your browser or try another browser.'],
+    net: ['Three.js yüklenemedi. İnternet bağlantını kontrol edip sayfayı yenile.', 'Three.js could not be loaded. Check your connection and reload the page.']
+  };
+  var st = document.createElement('style');
+  st.textContent = '.glfail{margin:10px 0;padding:10px 12px;border-radius:12px;border:1px solid rgba(214,84,60,.65);background:rgba(214,84,60,.16);color:inherit;font-size:13px;line-height:1.4;text-align:left}.glfail p{margin:0 0 4px}.glfail p+p{margin:0;font-size:12px;opacity:.82}.glfail-fixed{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9999;width:min(92vw,420px);background:#2a1410;color:#f7e9e2;box-shadow:0 8px 30px rgba(0,0,0,.5)}';
+  document.head.appendChild(st);
+  var box = null, kind = '';
+  function show(k) {
+    if (kind === 'gl' && k !== 'gl') return;
+    kind = k; if (k === 'gl') window.__glFailed = true;
+    var pb = document.querySelector('#b-play'); if (pb) pb.disabled = true;
+    var tr = /^tr/i.test(navigator.language || ''), m = T[k];
+    if (!box) {
+      box = document.createElement('div'); box.className = 'glfail'; box.setAttribute('role', 'alert');
+      var host = document.querySelector('#loadmsg');
+      if (host && host.getClientRects().length) { if (host.childElementCount) host.parentNode.insertBefore(box, host); else { host.textContent = ''; host.parentNode.insertBefore(box, host.nextSibling); } }
+      else { box.className += ' glfail-fixed'; document.body.appendChild(box); }
+    }
+    box.textContent = '';
+    [tr ? m[0] : m[1], tr ? m[1] : m[0]].forEach(function (s) { var p = document.createElement('p'); p.textContent = s; box.appendChild(p); });
+  }
+  window.__glFatal = show;
+  window.__glClear = function () { if (box && kind === 'net') { box.remove(); box = null; kind = ''; } };
+  // inert stand-in for the renderer when WebGL cannot start, so the menu code below still runs
+  window.__glStub = function (canvas) {
+    var p = new Proxy(function () {}, {
+      get: function (t, k) { return k === 'domElement' ? canvas : k === Symbol.toPrimitive ? function () { return 0; } : k === 'then' ? undefined : p; },
+      set: function () { return true; }, apply: function () { return p; }, construct: function () { return p; }
+    });
+    return p;
+  };
+  setTimeout(function () { if (!window.__three) show('net'); }, 15000);
+})();
+</script>
+
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"},"integrity":{"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js":"sha384-GY5FqjttLCFRt/McQbyaVdCk2O1IQtOeX8Py6NfD89BIAsIyJFRl4UgSXrk2vXAk","https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/utils/BufferGeometryUtils.js":"sha384-wOjwauvHlJO7K6APr7FmMGH2nupQa3Ndzas9bJZhsAMOK055efJud8ns4aYmASKv"}}
 </script>
@@ -1831,12 +1870,12 @@ window.addEventListener('unhandledrejection', e => { window.__errs.push('Promise
   const q = new URLSearchParams(location.search).get('lang');
   const tr = q ? q === 'tr' : /^tr/i.test(navigator.language || '');
   document.getElementById('loadmsg').textContent = tr ? 'Yükleniyor… 0/1' : 'Loading… 0/1';
-  setTimeout(() => { if (!window.__loaded) document.getElementById('loadmsg').textContent = tr ? 'Three.js yüklenemedi; internet bağlantısını kontrol et.' : 'Three.js could not load; check your connection.'; }, 20000);
 })();
 </script>
 
-<script type="module">
+<script type="module" onerror="window.__glFatal&&__glFatal('net')">
 import * as THREE from 'three';
+window.__three = true; if (window.__glClear) window.__glClear();
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ---------------------------------------------------------------------------
@@ -2585,7 +2624,9 @@ let CLOTH = buildCloth(DISP.W, DISP.H);
 // Three.js world
 // ---------------------------------------------------------------------------
 const canvas = document.getElementById('c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+let glFail = false, renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' }); }
+catch (e) { glFail = true; renderer = window.__glStub(canvas); window.__glFatal('gl'); }
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, SET.quality === 'low' ? 1 : 1.5));
 // Arena: dynamic pixel ratio for weak GPUs under the quality tier's cap (re-attached in setQuality, which resets the ratio)
 let arenaPerf = null;
@@ -2601,7 +2642,7 @@ scene.background = new THREE.Color('#1c0d07');
 scene.fog = new THREE.Fog('#26120a', 11, 27);
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 60);
 // arena-core v2 render preset: neutral tone mapping, warm bloom on the oil lamps and the lit screen edge, vignette, grain, grade
-const FX = window.ArenaCore ? ArenaCore.render.setup(renderer, scene, camera, { tonlama: 'neutral', pozlama: 1.05, ortam: 0, bloom: { guc: 0.42, esik: 0.8, yaricap: 0.45 }, vinyet: 0.32, grain: 0.04, renk: { doygunluk: 1.08, kontrast: 1.06 } }) : null;
+const FX = window.ArenaCore && !glFail ? ArenaCore.render.setup(renderer, scene, camera, { tonlama: 'neutral', pozlama: 1.05, ortam: 0, bloom: { guc: 0.42, esik: 0.8, yaricap: 0.45 }, vinyet: 0.32, grain: 0.04, renk: { doygunluk: 1.08, kontrast: 1.06 } }) : null;
 
 let seed = 1234567;
 const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
@@ -4234,8 +4275,8 @@ function buildMap() {
     el.appendChild(card);
   });
 }
-function openMap() { silenceProximityAudio(); G.daily = null; G.screen = 'map'; showOnly('ov-map'); $('hud').hidden = true; $('tray').hidden = true; $('pill').hidden = true; $('tl').hidden = true; $('preview').hidden = true; $('ov-result').hidden = true; if ($('gizmo')) $('gizmo').hidden = true; buildMap(); setView('aud', true); G.dispDirty = true; const b = document.querySelector('#acts button.next') || document.querySelector('#acts button:not(:disabled)'); if (b && !FLAG.auto) b.focus(); }
-function openScene(i, restore, daily) {
+function openMap() { if (glFail) return; silenceProximityAudio(); G.daily = null; G.screen = 'map'; showOnly('ov-map'); $('hud').hidden = true; $('tray').hidden = true; $('pill').hidden = true; $('tl').hidden = true; $('preview').hidden = true; $('ov-result').hidden = true; if ($('gizmo')) $('gizmo').hidden = true; buildMap(); setView('aud', true); G.dispDirty = true; const b = document.querySelector('#acts button.next') || document.querySelector('#acts button:not(:disabled)'); if (b && !FLAG.auto) b.focus(); }
+function openScene(i, restore, daily) { if (glFail) return;
   G.daily = daily || null; G.dailyRec = null;
   showOnly(null);
   if (!G.introSeen) { G.screen = 'intro'; G.introT = 0; G.introX = 0; G.pendingStart = { i, r: restore }; setView('aud', true); sfx.nareke(0.2); setTimeout(() => sfx.rustle(), 1500); toast(t('goster'), 'info'); return; }
@@ -4258,8 +4299,8 @@ function closeNews() { $('ov-news').hidden = true; $('ver-tag').focus(); }
 $('ver-tag').addEventListener('click', () => { audioInit(); sfx.click(); openNews(); });
 $('b-nclose').addEventListener('click', () => { sfx.click(); closeNews(); });
 function closeSettings() { showOnly(G.settingsFrom); if (G.settingsFrom === 'ov-pause') $('b-resume').focus(); }
-function setQuality(q) {
-  SET.quality = q; saveSettings();
+function setQuality(q, auto) {
+  SET.quality = q; if (!auto) saveSettings();
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, q === 'low' ? 1 : 1.5)); renderer.setSize(innerWidth, innerHeight); if (FX) FX.setSize(innerWidth, innerHeight); arenaPerfAttach();
   // rebuild quality-dependent shadow-screen target (DISP), cloth overlay (CLOTH) and Three.js screen texture; dispose old ones
   const [w, h] = dispSize(q), prevCv = DISP.cv, next = mkTarget(w, h, false);
@@ -4457,19 +4498,35 @@ function debugText() {
 }
 fitCams(); setView('aud', true);
 window.__loaded = true;
-$('loadmsg').textContent = SET.lang === 'tr' ? 'Yükleniyor… 1/1' : 'Loading… 1/1';
-setTimeout(() => { $('loadmsg').textContent = ''; }, 400);
-$('b-play').disabled = false;
+if (!glFail) $('loadmsg').textContent = SET.lang === 'tr' ? 'Yükleniyor… 1/1' : 'Loading… 1/1';
+setTimeout(() => { if (!glFail) $('loadmsg').textContent = ''; }, 400);
+$('b-play').disabled = glFail;
 applyTexts(); auVolumes();
 if (FLAG.scene >= 1 && FLAG.scene <= 24) { G.introSeen = true; startScene(FLAG.scene - 1); }
 if (FLAG.sim > 0) window.karagozSim(FLAG.sim);
 let last = performance.now();
+// Auto quality: a weak device that stays under ~50 fps for a few seconds of real play drops to the existing low tier (display
+// resolution, shadows, dust). Display only: scoring (matchOf) reads the plain shapes and is untouched. Not saved, so the next
+// visit measures again; never runs for bots, ?low or the virtual-clock capture.
+const AQ = { t0: 0, n: 0, bad: 0, warm: 0, off: FLAG.auto || FLAG.low || Q.has('capture') || SET.quality === 'low' };
+function autoQuality(now, dt) {
+  if (AQ.off) return;
+  if (G.screen !== 'play' || G.paused || G.simming || G.hidden || dt >= 0.5) { AQ.t0 = 0; AQ.n = 0; if (G.screen !== 'play') { AQ.warm = 0; AQ.bad = 0; } return; }
+  if ((AQ.warm += dt) < 2) return;
+  if (!AQ.t0) { AQ.t0 = now; AQ.n = 0; return; }
+  AQ.n++;
+  if (now - AQ.t0 < 3000) return;
+  const fps = AQ.n * 1000 / (now - AQ.t0); AQ.t0 = now; AQ.n = 0;
+  AQ.bad = fps < 50 ? AQ.bad + 1 : 0;
+  if (AQ.bad >= 2) { AQ.off = true; setQuality('low', true); toast(SET.lang === 'tr' ? 'Akıcılık için düşük kaliteye geçildi' : 'Switched to Low quality for smoother play', 'info'); }
+}
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (G.hidden) return;
   if (!G.paused) update(dt);
   render(dt);
+  autoQuality(now, (now - (frame.prev || now)) / 1000); frame.prev = now;
   DBG.frames++; DBG.acc += dt;
   if (DBG.acc >= 0.5) { DBG.fps = Math.round(DBG.frames / DBG.acc); DBG.frames = 0; DBG.acc = 0; if (FLAG.debug) debugText(); exportState(); }
 }
